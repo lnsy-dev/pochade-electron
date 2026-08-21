@@ -1,0 +1,18 @@
+[package]
+name = "fibonacci"
+version = "0.1.0"
+edition = "2021"
+authors = ["Your Name <you@example.com>"]
+description = "A simple Rust WebAssembly module for computing Fibonacci numbers"
+license = "Unlicense"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen = "0.2.92"
+
+[profile.release]
+# Optimize for small binary size
+opt-level = "z"
+lto = true

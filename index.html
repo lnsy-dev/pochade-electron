@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pochade-Electron — For Writing JS with Passion</title>
+  <meta name="description" content="A lightweight, opinionated starter template for building apps that ship as both an Electron desktop app and a static web app — with SQLite local persistence and optional C++/Rust WebAssembly, all in vanilla JavaScript.">
+  <meta property="og:title" content="Pochade-Electron">
+  <meta property="og:description" content="For Writing JS with Passion. One codebase: an Electron desktop app and a static web app, with SQLite local persistence and optional WebAssembly.">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+  <style>
+    /* Styles — Typographic system per Bringhurst, Elements of Typographic Style */
+    /*
+      Principles applied:
+      • Serif body text for reading comfort (EB Garamond)
+      • Roboto Condensed for headings — elegant condensed sans
+      • Ragged right, never justified
+      • Hanging-paragraph indentation over between-paragraph spacing
+      • Measure: ~80ch
+      • Leading: generous (1.4 on body, tighter on headings)
+      • Modular scale: 1 : 1.2 : 1.44 : 1.728 … (minor third)
+      • Vertical rhythm tied to baseline grid
+      • Subtle rules; no heavy borders
+    */
+
+    @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;1,400&family=Roboto+Condensed:ital,wght@0,100..900;1,100..900&display=swap');
+
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      /* Palette — warm paper */
+      --color-bg:         #f2ece2;
+      --color-text:       #444;
+      --color-heading:    #444;
+      --color-link:       #E4191C;
+      --color-link-hover: #9F1113;
+      --color-rule:       rgba(0, 0, 0, 0.12);
+
+      /* Modular scale (minor third, 1.2 ratio) */
+      --type-body: 1.25rem;   /* 20px */
+      --type-h3:   1.5rem;    /* 24px */
+      --type-h2:   1.8rem;    /* 28.8px */
+      --type-h1:   2.16rem;   /* 34.56px */
+
+      /* Leading */
+      --leading-body:    1.4;
+      --leading-heading: 1.15;
+
+      /* Spacing rhythm (multiples of body line-height ≈ 22.4px) */
+      --rhythm-xs: 0.5rem;  /* ~11px  */
+      --rhythm-sm: 1rem;    /* ~22px  */
+      --rhythm-md: 1.5rem;  /* ~34px  */
+      --rhythm-lg: 2rem;    /* ~45px  */
+      --rhythm-xl: 3rem;    /* ~67px  */
+
+      /* Measure */
+      --measure: 80ch;
+
+      /* Code */
+      --mono: 'SF Mono', Monaco, Inconsolata, 'Fira Code', monospace;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      font-size: 100%;
+    }
+
+    body {
+      padding: 1em;
+      font-family: 'EB Garamond', 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif;
+      font-size: var(--type-body);
+      line-height: var(--leading-body);
+      color: var(--color-text);
+      background-color: var(--color-bg);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+
+      /* Letterpress engrave effect */
+      text-shadow:
+        -0.5px -0.5px 0 rgba(0, 0, 0, 0.40),
+         0.5px  0.5px 0 rgba(255, 255, 255, 1);
+
+      /* OpenType features */
+      font-kerning: normal;
+      font-variant-ligatures: common-ligatures discretionary-ligatures historical-ligatures;
+      font-variant-caps: normal;
+      font-variant-numeric: normal;
+      font-feature-settings:
+        'kern' 1,
+        'liga' 1,
+        'dlig' 1,
+        'calt' 1,
+        'cswh' 1,
+        'hlig' 1,
+        'ss01' 1,
+        'cv01' 1,
+        'opct' 1;
+    }
+
+    header,
+    main,
+    footer {
+      max-width: var(--measure);
+      margin-left: auto;
+      margin-right: auto;
+      padding-left: var(--rhythm-md);
+      padding-right: var(--rhythm-md);
+    }
+
+    /* Headings */
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'Roboto Condensed', sans-serif;
+      font-optical-sizing: auto;
+      font-weight: 400;
+      font-style: normal;
+      color: var(--color-heading);
+      line-height: var(--leading-heading);
+      padding-bottom: var(--rhythm-xs);
+      break-after: avoid;
+      page-break-after: avoid;
+      text-shadow: none;
+      font-kerning: normal;
+      font-variant-ligatures: common-ligatures discretionary-ligatures;
+      font-feature-settings:
+        'kern' 1,
+        'liga' 1,
+        'dlig' 1,
+        'calt' 1;
+    }
+
+    h1 {
+      font-size: var(--type-h1);
+      padding-top: var(--rhythm-xl);
+    }
+
+    h2 {
+      font-size: var(--type-h2);
+      padding-top: 0;
+      margin-left: -2ch;
+    }
+
+    h3 {
+      font-size: var(--type-h3);
+      padding-top: var(--rhythm-md);
+    }
+
+    h4 { font-size: calc(var(--type-body) * 1.2); padding-top: var(--rhythm-sm); }
+    h5 { font-size: var(--type-body);             padding-top: var(--rhythm-sm); }
+    h6 { font-size: calc(var(--type-body) * 0.9); padding-top: var(--rhythm-sm); }
+
+    /* Paragraphs — hanging indent, ragged right */
+    p {
+      text-align: left;
+      text-indent: 1.5em;
+      margin-bottom: 0;
+      orphans: 3;
+      widows: 3;
+    }
+
+    section > p:first-of-type,
+    article > p:first-of-type,
+    aside > p:first-of-type,
+    main > p:first-of-type {
+      text-indent: 0;
+    }
+
+    h1 + p, h2 + p, h3 + p, h4 + p, h5 + p, h6 + p {
+      text-indent: 0;
+    }
+
+    strong {
+      font-weight: 400;
+      font-style: italic;
+    }
+
+    /* Links */
+    a {
+      color: var(--color-link);
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 0.15em;
+      transition: color 0.2s ease;
+    }
+
+    a:hover {
+      color: var(--color-link-hover);
+    }
+
+    a[href^="#"]:hover {
+      color: var(--color-link-hover);
+    }
+
+    /* Header */
+    header {
+      padding-top: var(--rhythm-lg);
+      padding-bottom: var(--rhythm-md);
+      text-align: left;
+    }
+
+    .logo-container {
+      text-align: center;
+    }
+
+    .ascii-logo {
+      display: block;
+      margin: 0 auto;
+      padding-bottom: var(--rhythm-md);
+      background: none;
+      border: none;
+      font-size: 0.55rem;
+      line-height: 1.2;
+      color: var(--color-link);
+      overflow-x: auto;
+    }
+
+    header h1 {
+      padding-top: 0;
+      padding-bottom: var(--rhythm-xs);
+    }
+
+    .tagline {
+      font-variant: small-caps;
+      font-size: 0.95em;
+      letter-spacing: 0.04em;
+      color: #555;
+      margin-bottom: var(--rhythm-sm);
+      padding-top: 0;
+      text-align: center;
+    }
+
+    /* Navigation */
+    nav {
+      font-family: 'Roboto Condensed', sans-serif;
+      display: flex;
+      gap: var(--rhythm-md);
+      flex-wrap: wrap;
+      padding-top: var(--rhythm-sm);
+      justify-content: center;
+    }
+
+    nav a {
+      text-decoration: none;
+      font-size: calc(var(--type-body) * 0.9);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    /* Main content */
+    main {
+      padding-top: var(--rhythm-lg);
+      padding-bottom: var(--rhythm-lg);
+    }
+
+    section {
+      margin-bottom: var(--rhythm-xl);
+    }
+
+    section:last-child {
+      margin-bottom: 0;
+    }
+
+    article {
+      margin-bottom: var(--rhythm-md);
+    }
+
+    article:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Lists */
+    ul, ol {
+      margin-bottom: var(--rhythm-md);
+      padding-left: var(--rhythm-md);
+    }
+
+    ul {
+      list-style-type: none;
+    }
+
+    ul li::marker {
+      color: var(--color-link);
+      content: '☞ ';
+    }
+
+    li {
+      margin-bottom: var(--rhythm-xs);
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    li:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Aside / callouts */
+    aside {
+      margin: var(--rhythm-md) 0;
+      padding: var(--rhythm-sm) var(--rhythm-md);
+      border-left: 2px solid var(--color-rule);
+      background: rgba(0, 0, 0, 0.02);
+    }
+
+    aside p {
+      text-indent: 0;
+    }
+
+    /* Code */
+    code, pre, .tree, .install-box {
+      text-shadow: none;
+      font-family: var(--mono);
+    }
+
+    code {
+      font-size: 0.85em;
+      background: rgba(0, 0, 0, 0.05);
+      padding: 0.1em 0.3em;
+      border-radius: 3px;
+    }
+
+    pre, .tree {
+      background: rgba(0, 0, 0, 0.03);
+      border: 1px solid var(--color-rule);
+      border-radius: 4px;
+      padding: var(--rhythm-sm) var(--rhythm-md);
+      overflow-x: auto;
+      margin: var(--rhythm-md) 0;
+      font-size: 0.85rem;
+      line-height: 1.7;
+      white-space: pre;
+    }
+
+    .tree .dir { color: var(--color-text); font-weight: 600; }
+    .tree .file { color: #555; }
+    .tree .comment { color: var(--color-link); font-style: italic; }
+
+    /* Install command */
+    .install-box {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5em;
+      background: rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--color-rule);
+      border-radius: 4px;
+      padding: var(--rhythm-sm) var(--rhythm-md);
+      font-size: 0.9em;
+      cursor: pointer;
+      user-select: all;
+      transition: background 0.15s ease;
+    }
+
+    .install-box:hover {
+      background: rgba(0, 0, 0, 0.08);
+    }
+
+    .install-box .prompt {
+      color: var(--color-link);
+      user-select: none;
+    }
+
+    .copy-hint {
+      font-size: 0.85em;
+      color: #666;
+      margin-top: var(--rhythm-xs);
+      text-indent: 0;
+    }
+
+    /* Blockquote */
+    blockquote {
+      margin: var(--rhythm-md) 0;
+      padding-left: var(--rhythm-md);
+      font-style: italic;
+      color: #444;
+    }
+
+    blockquote p {
+      text-indent: 0;
+    }
+
+    cite {
+      display: block;
+      margin-top: var(--rhythm-xs);
+      font-style: normal;
+      font-variant: small-caps;
+      font-size: 0.9em;
+      letter-spacing: 0.02em;
+      color: #666;
+    }
+
+    /* Command table */
+    .commands {
+      width: 100%;
+      border-collapse: collapse;
+      margin: var(--rhythm-md) 0;
+      font-size: 0.95em;
+    }
+
+    .commands td {
+      padding: 0.35em 0.5em;
+      vertical-align: top;
+      border-bottom: 1px solid var(--color-rule);
+    }
+
+    .commands td:first-child {
+      white-space: nowrap;
+      text-shadow: none;
+      font-family: var(--mono);
+      font-size: 0.85em;
+    }
+
+    /* Glyph */
+    .glyph {
+      color: var(--color-link);
+    }
+
+    /* Footer */
+    footer {
+      padding-top: var(--rhythm-md);
+      padding-bottom: var(--rhythm-lg);
+      text-align: center;
+      font-style: italic;
+      font-size: 0.85em;
+      color: #666;
+      margin: auto;
+    }
+
+    footer p {
+      text-align: center;
+      text-indent: 0;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      :root {
+        --measure: 100vw;
+      }
+
+      header h1 {
+        font-size: var(--type-h2);
+      }
+
+      .ascii-logo {
+        font-size: 0.4rem;
+      }
+
+      nav {
+        flex-wrap: wrap;
+        gap: var(--rhythm-sm);
+      }
+
+      nav a {
+        flex: 0 0 calc(50% - var(--rhythm-sm) / 2);
+        text-align: center;
+      }
+
+      h2 {
+        margin-left: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-container">
+      <pre class="ascii-logo">.-. .-. .-. . . .-. .-. .-.   . .-. .   .-. .-. .-. .-. .-. . . .-.
+|-' | | |   |-| |-| |  )|-    | |-  |   |-  |    |  |(  | | | | |\|
+'   `-' `-' ' ` ` ' `-' `-' `-' `-' `-' `-' `-'  '  ' ' `-' `-' ' ` '</pre>
+      <h1>Pochade-Electron</h1>
+      <h4 class="tagline">For Writing JS with Passion</h4>
+    </div>
+    <nav>
+      <a href="#about">About</a>
+      <a href="#features">Features</a>
+      <a href="#quickstart">Quick Start</a>
+      <a href="#persistence">Persistence</a>
+      <a href="#commands">Commands</a>
+      <a href="#structure">Structure</a>
+    </nav>
+  </header>
+
+  <main>
+
+    <section id="about">
+      <h2><span class="glyph">⍼</span> About</h2>
+      <p>
+        There are some frameworks for writing careful enterprise software. This is not one of them.
+      </p>
+      <p>
+        Pochade-Electron is an <code>npx</code> project scaffolder: a lightweight, opinionated starter template for building apps that ship as
+        <strong>both an Electron desktop app and a static, front-end-only web app</strong> — with SQLite local persistence and optional
+        C++/Rust WebAssembly, all in vanilla JavaScript. No framework lock-in. No unnecessary abstractions. Just fast, passionate code.
+      </p>
+      <aside>
+        <h3>Get started in one command</h3>
+        <div class="install-box" onclick="navigator.clipboard.writeText('npx pochade-electron my-project'); const hint = this.nextElementSibling; hint.textContent='Copied!'; setTimeout(()=>hint.textContent='Click the command to copy it.', 1500);" title="Click to copy">
+          <span class="prompt">$</span>
+          <span>npx pochade-electron my-project</span>
+        </div>
+        <p class="copy-hint">Click the command to copy it. Requires Node.js 18+.</p>
+      </aside>
+    </section>
+
+    <section id="features">
+      <h2><span class="glyph">⍼</span> Features</h2>
+      <article>
+        <h3>Dual Targets</h3>
+        <p>One codebase: <code>npm run build</code> produces a static web app (<code>dist/</code>), <code>npm run electron</code> runs it as a desktop app, and <code>npm run electron:build</code> packages it with electron-builder.</p>
+      </article>
+      <article>
+        <h3>SQLite in the Browser</h3>
+        <p><strong>@sqlite.org/sqlite-wasm</strong> running in a web worker, with read/write of entries and index generation out of the box.</p>
+      </article>
+      <article>
+        <h3>Local File Storage</h3>
+        <p>OPFS (Origin Private File System) persistence for the database, plus the File System Access API to export/import the database file — both work in Chrome and in Electron's renderer.</p>
+      </article>
+      <article>
+        <h3>Custom HTML Elements</h3>
+        <p>Built-in support for <strong>dataroom-js</strong>. Create reusable components without Shadow DOM complexity.</p>
+      </article>
+      <article>
+        <h3>WebAssembly, Optional</h3>
+        <p>Choose C++ (Emscripten), Rust (wasm-pack), both, or none at scaffolding time. Prebuilt binaries are included, so it works before you install any toolchain.</p>
+      </article>
+      <article>
+        <h3>Modern Tooling</h3>
+        <p>Webpack 5, SWC, PostCSS with cssnano. Write real CSS — no CSS-in-JS required.</p>
+      </article>
+      <article>
+        <h3>Tests Included</h3>
+        <p>Playwright end-to-end tests and Vitest unit tests ship with the template, ready to run.</p>
+      </article>
+      <article>
+        <h3>AI Context</h3>
+        <p>Includes an <code>AGENTS.md</code> describing the project's conventions for AI-assisted development.</p>
+      </article>
+    </section>
+
+    <section id="quickstart">
+      <h2><span class="glyph">⍼</span> Quick Start</h2>
+      <ol>
+        <li>Scaffold a new project: <code>npx pochade-electron my-project</code></li>
+        <li>Answer the interactive prompts (WASM support, title, description, author, license, etc.).</li>
+        <li>Enter your project: <code>cd my-project</code></li>
+        <li>Start the dev server: <code>npm start</code> — then open <code>http://localhost:3000</code></li>
+        <li>In a second terminal, launch the desktop app: <code>npm run electron</code> (it hot-reloads against the dev server)</li>
+      </ol>
+      <p>The scaffolder copies the template, prunes the WASM examples you didn't pick, configures <code>package.json</code> (including the electron-builder <code>appId</code>/<code>productName</code>), fills in your metadata, and installs all dependencies automatically.</p>
+    </section>
+
+    <section id="persistence">
+      <h2><span class="glyph">⍼</span> A Note on OPFS Persistence</h2>
+      <p>
+        The SQLite database persists in OPFS (Origin Private File System) via sqlite-wasm's "opfs-sahpool" VFS. Unlike the classic OPFS VFS, this needs
+        <strong>no cross-origin isolation headers</strong> — the generated app persists data out of the box on any static host, in the Electron renderer,
+        and in any modern browser (Chrome, Edge, Firefox, Safari).
+      </p>
+      <p>
+        If OPFS is ever unavailable, the app still works with a transient in-memory database, and users can export/import it as a file via the
+        File System Access API (<code>showSaveFilePicker</code> / <code>showOpenFilePicker</code>).
+      </p>
+    </section>
+
+    <section id="commands">
+      <h2><span class="glyph">⍼</span> Inside the Generated Project</h2>
+      <table class="commands">
+        <tr><td>npm start</td><td>Start the web development server</td></tr>
+        <tr><td>npm run build</td><td>Build the static web app into <code>dist/</code></td></tr>
+        <tr><td>npm run electron</td><td>Launch in Electron (dev server if running, else <code>dist/</code>)</td></tr>
+        <tr><td>npm run electron:build</td><td>Build and package the desktop app into <code>release/</code></td></tr>
+        <tr><td>npm test</td><td>Run the Playwright e2e tests (first run: <code>npx playwright install chromium</code>)</td></tr>
+        <tr><td>npm run test:unit</td><td>Run the Vitest unit tests</td></tr>
+        <tr><td>npm run build:wasm:cpp</td><td>Rebuild the C++ wasm example (needs Emscripten)</td></tr>
+        <tr><td>npm run build:wasm:rust</td><td>Rebuild the Rust wasm example (needs wasm-pack)</td></tr>
+      </table>
+    </section>
+
+    <section id="structure">
+      <h2><span class="glyph">⍼</span> What You Get</h2>
+      <div class="tree">
+<span class="dir">my-project/</span>
+├── <span class="dir">electron/</span>            <span class="comment"># Electron main process</span>
+│   └── <span class="file">main.js</span>
+├── <span class="dir">src/</span>                 <span class="comment"># JavaScript source files</span>
+│   ├── <span class="dir">lib/</span>             <span class="comment"># Framework-free libraries (database, file storage)</span>
+│   ├── <span class="dir">wasm/</span>            <span class="comment"># Optional C++/Rust WebAssembly</span>
+│   ├── <span class="file">db-component.js</span>  <span class="comment"># SQLite example component</span>
+│   ├── <span class="file">file-storage-component.js</span>
+│   └── <span class="file">sqlite-worker.js</span> <span class="comment"># sqlite-wasm module worker</span>
+├── <span class="dir">styles/</span>              <span class="comment"># CSS files (one per component)</span>
+├── <span class="dir">tests/</span>               <span class="comment"># Playwright e2e + Vitest unit tests</span>
+├── <span class="dir">scripts/</span>             <span class="comment"># Build scripts</span>
+├── <span class="file">index.html</span>           <span class="comment"># Main HTML file</span>
+├── <span class="file">index.js</span>             <span class="comment"># Main JS entry point</span>
+├── <span class="file">index.css</span>            <span class="comment"># Main CSS file</span>
+├── <span class="file">webpack.config.js</span>    <span class="comment"># Build configuration</span>
+├── <span class="file">package.json</span>         <span class="comment"># Project metadata + electron-builder config</span>
+└── <span class="file">.env.example</span>         <span class="comment"># Environment variable template</span>
+      </div>
+    </section>
+
+    <section id="philosophy">
+      <h2><span class="glyph">⍼</span> Philosophy</h2>
+      <blockquote>
+        <p>No framework lock-in, no Shadow DOM, no CSS-in-JS, no complex build chains. Write JavaScript, not framework code.</p>
+        <cite>Same as Pochade-JS</cite>
+      </blockquote>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>
+      Created by <a href="https://github.com/lnsy-dev">LNSY</a> ·
+      <a href="https://github.com/lnsy-dev/pochade-electron">GitHub</a> ·
+      <a href="https://github.com/lnsy-dev/pochade-electron/issues">Issues</a> ·
+      <a href="https://github.com/lnsy-dev/pochade-electron#readme">Full README</a> ·
+      Modeled on <a href="https://github.com/lnsy-dev/pochade-js">Pochade-JS</a>
+    </p>
+    <p>Unlicense (Public Domain) · Write JS with passion!</p>
+  </footer>
+
+</body>
+</html>

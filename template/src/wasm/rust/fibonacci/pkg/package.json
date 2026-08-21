@@ -1,0 +1,20 @@
+{
+  "name": "fibonacci",
+  "type": "module",
+  "collaborators": [
+    "Your Name <you@example.com>"
+  ],
+  "description": "A simple Rust WebAssembly module for computing Fibonacci numbers",
+  "version": "0.1.0",
+  "license": "Unlicense",
+  "files": [
+    "fibonacci_bg.wasm",
+    "fibonacci.js",
+    "fibonacci.d.ts"
+  ],
+  "main": "fibonacci.js",
+  "types": "fibonacci.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

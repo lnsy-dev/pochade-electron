@@ -1,0 +1,77 @@
+{
+  "name": "",
+  "version": "0.1.0",
+  "description": "A dual-target Electron + web app with SQLite (sqlite-wasm) local persistence, Chrome file APIs, and optional C++/Rust WebAssembly",
+  "main": "electron/main.js",
+  "type": "module",
+  "author": "",
+  "license": "Unlicense",
+  "keywords": [
+    "electron",
+    "sqlite",
+    "sqlite-wasm",
+    "opfs",
+    "file-system-access-api",
+    "webassembly",
+    "custom-elements",
+    "vanilla-js",
+    "dataroom-js",
+    "webpack"
+  ],
+  "scripts": {
+    "start": "webpack serve",
+    "build": "NODE_ENV=production webpack build",
+    "electron": "electron .",
+    "electron:build": "npm run build && electron-builder",
+    "build:wasm:cpp": "cd src/wasm/cpp && make",
+    "build:wasm:rust": "cd src/wasm/rust/fibonacci && wasm-pack build --target web",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:unit": "vitest run"
+  },
+  "dependencies": {
+    "@sqlite.org/sqlite-wasm": "3.53.0-build1",
+    "dataroom-js": "^1.0.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0",
+    "@swc/core": "^1.9.3",
+    "copy-webpack-plugin": "^14.0.0",
+    "css-loader": "^7.1.2",
+    "cssnano": "^8.0.1",
+    "dotenv": "17.4.2",
+    "electron": "^43.4.0",
+    "electron-builder": "^26.15.3",
+    "html-webpack-plugin": "^5.6.7",
+    "mini-css-extract-plugin": "^2.9.2",
+    "postcss": "^8.5.15",
+    "postcss-loader": "^8.2.0",
+    "style-loader": "^4.0.0",
+    "swc-loader": "^0.2.6",
+    "vitest": "^3.2.4",
+    "webpack": "^5.107.0",
+    "webpack-cli": "^7.0.2",
+    "webpack-dev-server": "^5.2.4"
+  },
+  "build": {
+    "appId": "com.example.pochadeelectron",
+    "productName": "Pochade Electron App",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**",
+      "electron/**",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}

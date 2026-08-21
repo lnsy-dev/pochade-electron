@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!--  Essential META Tags -->
+  <meta property="og:title" content="${project_title}">
+  <meta property="og:type" content="article" />
+  <meta property="og:image" content="${project_image_url}">
+  <meta property="og:url" content="${project_url}">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <!--  Non-Essential, But Recommended -->
+  <meta property="og:description" content="${project_description}">
+  <meta property="og:site_name" content="${project_sitename}">
+  <meta name="twitter:image:alt" content="${project_alt_text}">
+
+  <title>${project_title}</title>
+
+</head>
+
+<body>
+  <!--
+    Memory Profiler Component
+    Fixed upper-left overlay showing memory and CPU usage. Hidden by default;
+    shown only when the Electron app is launched with --memory-profiler.
+  -->
+  <memory-profiler-component id="memory_profiler"></memory-profiler-component>
+
+  <h1>${project_title}</h1>
+  <p>${project_description}</p>
+
+  <!-- ========================================================================= -->
+  <!-- Database Example                                                          -->
+  <!-- ========================================================================= -->
+
+  <section id="database-example">
+    <!--
+      Database Component
+      Demonstrates sqlite-wasm in a web worker: read/write entries and
+      index generation, persisted locally in OPFS (Origin Private
+      File System).
+    -->
+    <db-component id="db_component"></db-component>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- Local File Storage Example                                                -->
+  <!-- ========================================================================= -->
+
+  <section id="file-storage-example">
+    <!--
+      File Storage Component
+      Demonstrates Chrome's File System Access API: export the SQLite
+      database to a file on disk and import one back.
+    -->
+    <file-storage-component id="file_storage_component"></file-storage-component>
+  </section>
+
+  <!-- <WASM-SECTION> -->
+  <!-- ========================================================================= -->
+  <!-- WebAssembly Examples                                                      -->
+  <!-- ========================================================================= -->
+
+  <section id="wasm-examples">
+    <h2>WebAssembly Examples</h2>
+
+    <!-- <WASM-CPP> -->
+    <!-- C++ WebAssembly: Emscripten-compiled fibonacci calculator -->
+    <wasm-cpp-component id="wasm_cpp_component"></wasm-cpp-component>
+    <!-- </WASM-CPP> -->
+
+    <!-- <WASM-RUST> -->
+    <!-- Rust WebAssembly: wasm-pack compiled fibonacci calculator -->
+    <wasm-rust-component id="wasm_rust_component"></wasm-rust-component>
+    <!-- </WASM-RUST> -->
+  </section>
+  <!-- </WASM-SECTION> -->
+
+  <script>
+    /**
+     * Event Listener Setup
+     *
+     * This script demonstrates how to listen to custom events emitted
+     * by dataroom-js components using the component's .on() method.
+     *
+     * We wrap it in a setTimeout to ensure the custom elements have
+     * been defined and connected before we attach listeners.
+     * In production code, prefer using DOMContentLoaded or
+     * customElements.whenDefined().
+     */
+    setTimeout(() => {
+      // Listen for database events
+      if (typeof db_component !== 'undefined' && db_component.on) {
+        db_component.on('DB-ENTRY-ADDED', (data) => {
+          console.log('[Main Thread] Entry added:', data);
+        });
+        db_component.on('DB-INDEX-CREATED', (data) => {
+          console.log('[Main Thread] Index created:', data);
+        });
+        db_component.on('DB-ERROR', (data) => {
+          console.error('[Main Thread] Database error:', data);
+        });
+      }
+
+      // Listen for file storage events
+      if (typeof file_storage_component !== 'undefined' && file_storage_component.on) {
+        file_storage_component.on('DB-EXPORTED', (data) => {
+          console.log('[Main Thread] Database exported:', data);
+        });
+        file_storage_component.on('DB-IMPORTED', (data) => {
+          console.log('[Main Thread] Database imported:', data);
+        });
+      }
+
+      // <WASM-CPP>
+      // Listen for C++ wasm computation results
+      if (typeof wasm_cpp_component !== 'undefined' && wasm_cpp_component.on) {
+        wasm_cpp_component.on('WASM-CPP-RESULT', (data) => {
+          console.log('[Main Thread] C++ WASM result:', data);
+        });
+      }
+      // </WASM-CPP>
+
+      // <WASM-RUST>
+      // Listen for Rust wasm computation results
+      if (typeof wasm_rust_component !== 'undefined' && wasm_rust_component.on) {
+        wasm_rust_component.on('WASM-RUST-RESULT', (data) => {
+          console.log('[Main Thread] Rust WASM result:', data);
+        });
+      }
+      // </WASM-RUST>
+    }, 1000);
+  </script>
+</body>
+
+</html>

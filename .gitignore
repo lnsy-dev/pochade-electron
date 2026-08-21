@@ -1,0 +1,12 @@
+node_modules
+*.log
+.DS_Store
+*.tgz
+
+# Template build artifacts (generated during testing)
+template/node_modules/
+template/dist/
+template/release/
+template/test-results/
+template/playwright-report/
+template/src/wasm/rust/**/target/
