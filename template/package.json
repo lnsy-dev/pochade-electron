@@ -21,12 +21,11 @@
   "scripts": {
     "start": "webpack serve",
     "build": "NODE_ENV=production webpack build",
-    "electron": "electron .",
+    "electron": "node electron/dev-runner.js",
     "electron:build": "npm run build && electron-builder",
     "build:wasm:cpp": "cd src/wasm/cpp && make",
     "build:wasm:rust": "cd src/wasm/rust/fibonacci && wasm-pack build --target web",
-    "test": "playwright test",
-    "test:ui": "playwright test --ui",
+    "test": "wdio run ./wdio.conf.js",
     "test:unit": "vitest run"
   },
   "dependencies": {
@@ -34,9 +33,13 @@
     "dataroom-js": "^1.0.1"
   },
   "devDependencies": {
-    "@playwright/test": "^1.52.0",
     "@swc/core": "^1.9.3",
+    "@wdio/cli": "^9.31.2",
+    "@wdio/local-runner": "^9.31.2",
+    "@wdio/mocha-framework": "^9.31.2",
+    "@wdio/spec-reporter": "^9.31.2",
     "copy-webpack-plugin": "^14.0.0",
+    "cross-spawn": "^7.0.6",
     "css-loader": "^7.1.2",
     "cssnano": "^8.0.1",
     "dotenv": "17.4.2",
@@ -49,6 +52,7 @@
     "style-loader": "^4.0.0",
     "swc-loader": "^0.2.6",
     "vitest": "^3.2.4",
+    "webdriverio": "^9.31.2",
     "webpack": "^5.107.0",
     "webpack-cli": "^7.0.2",
     "webpack-dev-server": "^5.2.4"

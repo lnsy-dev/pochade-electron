@@ -24,7 +24,9 @@ Starts a development server on a project-specific port written to `.env` (defaul
 npm run electron
 ```
 
-When the dev server is running, Electron loads it (hot reload). Otherwise it loads the production build from `dist/` — run `npm run build` first.
+Starts the webpack dev server and launches Electron against it. Changes to `src/`, `styles/`, `index.js`, etc. are rebuilt and reloaded automatically in the Electron window.
+
+Changes to main-process files under `electron/` still require a manual restart of `npm run electron`.
 
 ### Memory Profiler
 
@@ -54,10 +56,9 @@ Builds the web app and packages it with electron-builder into `release/` (macOS,
 
 ## Testing
 
-End-to-end tests (Playwright) cover the full app in a real browser — database reads/writes, OPFS persistence across reloads, the WASM demos, and the File System Access dialog flows (the native pickers are stubbed via `page.addInitScript`, since automation cannot click OS dialogs):
+End-to-end tests (WebdriverIO) cover the full app in a real (headless) browser — database reads/writes, OPFS persistence across reloads, the WASM demos, and the File System Access dialog flows (the native pickers are stubbed via `browser.addInitScript`, since automation cannot click OS dialogs). Requires a local Chrome install; ChromeDriver is managed automatically:
 
 ```bash
-npx playwright install chromium   # first run only
 npm test
 ```
 
@@ -67,7 +68,7 @@ Unit tests (Vitest) cover the libraries in `src/lib/` and the sqlite worker's me
 npm run test:unit
 ```
 
-Debug e2e tests interactively with `npm run test:ui`.
+The e2e suite starts and stops the webpack dev server automatically (`onPrepare`/`onComplete` hooks in `wdio.conf.js`).
 
 ## Local Storage Architecture
 
@@ -95,14 +96,14 @@ SEPARATE_CSS=true                             # default: false
 - `src/wasm/` - WebAssembly source files (C++ and Rust), if selected at scaffolding time
 - `electron/` - Electron main process
 - `styles/` - CSS files
-- `tests/` - Test files (`tests/e2e/` Playwright, `tests/unit/` Vitest)
+- `tests/` - Test files (`tests/e2e/` WebdriverIO, `tests/unit/` Vitest)
 - `scripts/` - Build scripts (including classic Web Worker transformation)
 - `assets/` - Static files (images, fonts, etc.)
 - `index.html` - Main HTML file
 - `index.js` - Main JavaScript entry point
 - `index.css` - Main CSS file
 - `webpack.config.js` - Webpack configuration
-- `playwright.config.js` - Playwright e2e configuration
+- `wdio.conf.js` - WebdriverIO e2e configuration
 - `vitest.config.js` - Vitest unit test configuration
 
 ## WebAssembly

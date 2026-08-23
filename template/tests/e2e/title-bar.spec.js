@@ -6,27 +6,27 @@
  * reserves space for the traffic-light buttons via CSS padding.
  */
 
-import { test, expect } from '@playwright/test';
+import { expect, browser } from '@wdio/globals';
 
-test.describe('transparent title bar', () => {
-  test('body has top padding reserved for the title bar', async ({ page }) => {
-    await page.goto('/');
+describe('transparent title bar', () => {
+  beforeEach(async () => {
+    await browser.url('/');
+  });
 
-    const paddingTop = await page.evaluate(() => {
-      return window.getComputedStyle(document.body).paddingTop;
-    });
+  it('body has top padding reserved for the title bar', async () => {
+    const paddingTop = await browser.execute(
+      () => window.getComputedStyle(document.body).paddingTop
+    );
 
     expect(paddingTop).toBe('40px');
   });
 
-  test('title bar height is exposed as a CSS variable', async ({ page }) => {
-    await page.goto('/');
-
-    const titleBarHeight = await page.evaluate(() => {
-      return getComputedStyle(document.documentElement)
+  it('title bar height is exposed as a CSS variable', async () => {
+    const titleBarHeight = await browser.execute(
+      () => getComputedStyle(document.documentElement)
         .getPropertyValue('--title-bar-height')
-        .trim();
-    });
+        .trim()
+    );
 
     expect(titleBarHeight).toBe('2.5rem');
   });

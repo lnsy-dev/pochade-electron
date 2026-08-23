@@ -4,61 +4,68 @@
  * End-to-end tests for the Rust WebAssembly demo component.
  */
 
-import { test, expect } from '@playwright/test';
+import { expect, browser } from '@wdio/globals';
+import { findButton, findByTextRegex } from '../helpers/e2e-utils.js';
 
-test.describe('WebAssembly Rust Component', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+describe('WebAssembly Rust Component', () => {
+  beforeEach(async () => {
+    await browser.url('/');
   });
 
-  test('renders the heading', async ({ page }) => {
-    const heading = page.locator('wasm-rust-component h2');
+  it('renders the heading', async () => {
+    const heading = $('wasm-rust-component h2');
     await expect(heading).toHaveText('WebAssembly Rust Example');
   });
 
-  test('computes fibonacci correctly', async ({ page }) => {
-    const input = page.locator('wasm-rust-component input');
-    const button = page.locator('wasm-rust-component button', { hasText: 'Compute (Rust)' });
-    const result = page.locator('wasm-rust-component p', { hasText: /^fib\(\d+\) = \d+$/ });
+  it('computes fibonacci correctly', async () => {
+    const input = $('wasm-rust-component input');
 
-    await input.fill('10');
-    await button.click();
+    await input.setValue('10');
+    await (await findButton('wasm-rust-component', 'Compute (Rust)')).click();
 
-    await expect(result).toContainText('fib(10) = 55', { timeout: 15000 });
+    const result = await findByTextRegex(
+      'wasm-rust-component p',
+      /^fib\(\d+\) = \d+$/
+    );
+    await expect(result).toHaveText(expect.stringContaining('fib(10) = 55'));
   });
 
-  test('computes fibonacci for edge case n=1', async ({ page }) => {
-    const input = page.locator('wasm-rust-component input');
-    const button = page.locator('wasm-rust-component button', { hasText: 'Compute (Rust)' });
-    const result = page.locator('wasm-rust-component p', { hasText: /^fib\(\d+\) = \d+$/ });
+  it('computes fibonacci for edge case n=1', async () => {
+    const input = $('wasm-rust-component input');
 
-    await input.fill('1');
-    await button.click();
+    await input.setValue('1');
+    await (await findButton('wasm-rust-component', 'Compute (Rust)')).click();
 
-    await expect(result).toContainText('fib(1) = 1', { timeout: 15000 });
+    const result = await findByTextRegex(
+      'wasm-rust-component p',
+      /^fib\(\d+\) = \d+$/
+    );
+    await expect(result).toHaveText(expect.stringContaining('fib(1) = 1'));
   });
 
-  test('emits WASM-RUST-RESULT event', async ({ page }) => {
-    const eventPromise = page.evaluate(() => {
-      return new Promise((resolve) => {
+  it('emits WASM-RUST-RESULT event', async () => {
+    // Store the event promise on window first (non-blocking), trigger
+    // the computation, then await the stored promise.
+    await browser.execute(() => {
+      window.__rustEventPromise = new Promise((resolve) => {
         const el = document.querySelector('wasm-rust-component');
         if (!el) {
           resolve(null);
           return;
         }
-        el.addEventListener('WASM-RUST-RESULT', (e) => {
-          resolve(e.detail);
-        }, { once: true });
+        el.addEventListener(
+          'WASM-RUST-RESULT',
+          (e) => resolve(e.detail),
+          { once: true }
+        );
       });
     });
 
-    const input = page.locator('wasm-rust-component input');
-    const button = page.locator('wasm-rust-component button', { hasText: 'Compute (Rust)' });
+    const input = $('wasm-rust-component input');
+    await input.setValue('7');
+    await (await findButton('wasm-rust-component', 'Compute (Rust)')).click();
 
-    await input.fill('7');
-    await button.click();
-
-    const detail = await eventPromise;
+    const detail = await browser.execute(() => window.__rustEventPromise);
     expect(detail).not.toBeNull();
     expect(detail.n).toBe(7);
     expect(detail.result).toBe(13);

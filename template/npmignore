@@ -9,11 +9,9 @@ release/
 
 # Tests and test configuration (not needed in published package)
 tests/
-playwright.config.js
+wdio.conf.js
 vitest.config.js
-test-results/
-playwright-report/
-playwright/.cache/
+wdio-*/
 
 # Version control
 .git/

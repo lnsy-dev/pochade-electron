@@ -540,13 +540,14 @@ async function createProject() {
   console.log('\n  npm start');
   console.log(`    Starts the web development server (http://localhost:${devPort}).`);
   console.log('\n  npm run electron');
-  console.log('    Launches the app in Electron (uses the dev server when it is running).');
+  console.log('    Starts the webpack dev server and launches the app in Electron.');
+  console.log('    Changes to src/, styles/, and index.js are rebuilt and reloaded automatically.');
   console.log('\n  npm run build');
   console.log('    Builds the static web app for production into dist/.');
   console.log('\n  npm run electron:build');
   console.log('    Builds and packages the Electron app into release/.');
   console.log('\n  npm test');
-  console.log('    Runs the Playwright end-to-end tests (first run: npx playwright install chromium).');
+  console.log('    Runs the WebdriverIO end-to-end tests in headless Chrome (requires a local Chrome install).');
   console.log('\n  npm run test:unit');
   console.log('    Runs the Vitest unit tests.');
   console.log('\n💡 We suggest that you begin by typing:');

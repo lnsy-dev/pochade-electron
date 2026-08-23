@@ -7,7 +7,7 @@
  * Why the pickers are stubbed: showSaveFilePicker() and
  * showOpenFilePicker() open NATIVE OS dialogs that no browser
  * automation can drive. So these tests install JavaScript stand-ins
- * for the picker functions via page.addInitScript() and assert:
+ * for the picker functions via browser.addInitScript() and assert:
  *   - the component invokes the dialogs from the click handlers
  *   - the bytes written through the save dialog are a real SQLite file
  *   - a file "picked" through the open dialog is imported and rendered
@@ -15,9 +15,20 @@
  *   - browsers without the API get the unsupported notice
  *
  * What these tests do NOT cover: the actual native dialog chrome.
+ *
+ * WebdriverIO note: addInitScript registrations persist for the whole
+ * session and re-run on every navigation, so each mock overwrites the
+ * previous one and the unsupported-API test runs LAST.
  */
 
-import { test, expect } from '@playwright/test';
+import { expect, browser, $, $$ } from '@wdio/globals';
+import {
+  waitForDbReady,
+  clearExistingEntries,
+  addNote,
+  expectEntryVisible,
+  findButton,
+} from '../helpers/e2e-utils.js';
 
 /**
  * Install picker stand-ins in the page before any app code runs.
@@ -27,8 +38,8 @@ import { test, expect } from '@playwright/test';
  * window.showOpenFilePicker resolves to a fake handle wrapping
  * window.__importFile (a File the test assigns later).
  */
-async function mockFileSystemAccessDialogs(page) {
-  await page.addInitScript(() => {
+async function mockFileSystemAccessDialogs() {
+  await browser.addInitScript(() => {
     window.__exportedFiles = [];
     window.__importFile = null;
 
@@ -55,30 +66,11 @@ async function mockFileSystemAccessDialogs(page) {
 }
 
 /**
- * Wait until <db-component> has initialized its database.
- */
-async function waitForDbReady(page) {
-  const status = page.locator('db-component .db-status');
-  await expect(status).toContainText('SQLite', { timeout: 15000 });
-}
-
-/**
- * Add a note through the db-component UI.
- */
-async function addNote(page, content) {
-  await page.locator('db-component .db-form input').fill(content);
-  await page.locator('db-component button', { hasText: 'Add entry' }).click();
-  await expect(
-    page.locator('db-component .db-entries li span', { hasText: content })
-  ).toBeVisible();
-}
-
-/**
  * Read back the bytes captured by the mocked save dialog as a plain
  * array of numbers plus the 16-byte file header.
  */
-function readExportedBytes(page) {
-  return page.evaluate(() => {
+async function readExportedBytes() {
+  return browser.execute(() => {
     const exported = window.__exportedFiles[0];
     const totalLength = exported.chunks.reduce((n, c) => n + c.byteLength, 0);
     const bytes = new Uint8Array(totalLength);
@@ -95,19 +87,22 @@ function readExportedBytes(page) {
   });
 }
 
-test.describe('File Storage Component (dialog UI)', () => {
-  test('export dialog saves a real SQLite database file', async ({ page }) => {
-    await mockFileSystemAccessDialogs(page);
-    await page.goto('/');
-    await waitForDbReady(page);
-    await addNote(page, 'note to export');
+describe('File Storage Component (dialog UI)', () => {
+  it('export dialog saves a real SQLite database file', async () => {
+    await mockFileSystemAccessDialogs();
+    await browser.url('/');
+    await waitForDbReady();
+    await clearExistingEntries();
+    await addNote('note to export');
 
-    await page.locator('file-storage-component button', { hasText: 'Export database to file' }).click();
+    await (await findButton('file-storage-component', 'Export database to file')).click();
 
-    const resultLine = page.locator('file-storage-component .file-storage-result');
-    await expect(resultLine).toContainText(/Exported \d+ bytes to app\.sqlite3\./);
+    const resultLine = $('file-storage-component .file-storage-result');
+    await expect(resultLine).toHaveText(
+      expect.stringMatching(/Exported \d+ bytes to app\.sqlite3\./)
+    );
 
-    const exported = await readExportedBytes(page);
+    const exported = await readExportedBytes();
     expect(exported.name).toBe('app.sqlite3');
     expect(exported.length).toBeGreaterThan(0);
 
@@ -116,88 +111,97 @@ test.describe('File Storage Component (dialog UI)', () => {
     expect(exported.header).toEqual(magic);
   });
 
-  test('import dialog replaces the database with the picked file', async ({ page }) => {
-    await mockFileSystemAccessDialogs(page);
-    await page.goto('/');
-    await waitForDbReady(page);
+  it('import dialog replaces the database with the picked file', async () => {
+    await mockFileSystemAccessDialogs();
+    await browser.url('/');
+    await waitForDbReady();
+    await clearExistingEntries();
 
     // Export a database containing only "original note"
-    await addNote(page, 'original note');
-    await page.locator('file-storage-component button', { hasText: 'Export database to file' }).click();
-    await expect(
-      page.locator('file-storage-component .file-storage-result')
-    ).toContainText(/Exported/);
+    await addNote('original note');
+    await (await findButton('file-storage-component', 'Export database to file')).click();
+    await expect($('file-storage-component .file-storage-result')).toHaveText(
+      expect.stringContaining('Exported')
+    );
 
     // Change the database after the export
-    await addNote(page, 'after export');
+    await addNote('after export');
 
     // Point the mocked open dialog at the exported bytes
-    await page.evaluate(() => {
+    await browser.execute(() => {
       const exported = window.__exportedFiles[0];
       window.__importFile = new File(exported.chunks, 'backup.sqlite3');
     });
 
-    await page.locator('file-storage-component button', { hasText: 'Import database from file' }).click();
+    await (await findButton('file-storage-component', 'Import database from file')).click();
 
-    const resultLine = page.locator('file-storage-component .file-storage-result');
-    await expect(resultLine).toContainText(/Imported backup\.sqlite3 \(\d+ bytes\)\./);
+    const resultLine = $('file-storage-component .file-storage-result');
+    await expect(resultLine).toHaveText(
+      expect.stringMatching(/Imported backup\.sqlite3 \(\d+ bytes\)\./)
+    );
 
     // The list refreshes to the imported state: original is back,
     // the post-export note is gone.
-    await expect(
-      page.locator('db-component .db-entries li span', { hasText: 'original note' })
-    ).toBeVisible();
-    await expect(
-      page.locator('db-component .db-entries li span', { hasText: 'after export' })
-    ).toHaveCount(0);
+    await expectEntryVisible('original note');
+    await browser.waitUntil(
+      async () => {
+        const spans = await $$('db-component .db-entries li span');
+        for (const span of spans) {
+          if ((await span.getText()) === 'after export') return false;
+        }
+        return true;
+      }
+    );
   });
 
-  test('cancelling the save dialog is silent (no error shown)', async ({ page }) => {
-    await page.addInitScript(() => {
+  it('cancelling the save dialog is silent (no error shown)', async () => {
+    await browser.addInitScript(() => {
       window.showSaveFilePicker = async () => {
         throw new DOMException('The user aborted a request.', 'AbortError');
       };
     });
-    await page.goto('/');
-    await waitForDbReady(page);
+    await browser.url('/');
+    await waitForDbReady();
 
-    await page.locator('file-storage-component button', { hasText: 'Export database to file' }).click();
+    await (await findButton('file-storage-component', 'Export database to file')).click();
 
     // Give the click handler time to run; the result line must stay empty
-    await page.waitForTimeout(500);
-    const resultLine = page.locator('file-storage-component .file-storage-result');
-    await expect(resultLine).toHaveText('');
+    await browser.pause(500);
+    const resultLine = $('file-storage-component .file-storage-result');
+    expect(await resultLine.getText()).toBe('');
   });
 
-  test('cancelling the open dialog is silent (no error shown)', async ({ page }) => {
-    await page.addInitScript(() => {
+  it('cancelling the open dialog is silent (no error shown)', async () => {
+    await browser.addInitScript(() => {
       window.showOpenFilePicker = async () => {
         throw new DOMException('The user aborted a request.', 'AbortError');
       };
     });
-    await page.goto('/');
-    await waitForDbReady(page);
+    await browser.url('/');
+    await waitForDbReady();
 
-    await page.locator('file-storage-component button', { hasText: 'Import database from file' }).click();
+    await (await findButton('file-storage-component', 'Import database from file')).click();
 
-    await page.waitForTimeout(500);
-    const resultLine = page.locator('file-storage-component .file-storage-result');
-    await expect(resultLine).toHaveText('');
+    await browser.pause(500);
+    const resultLine = $('file-storage-component .file-storage-result');
+    expect(await resultLine.getText()).toBe('');
   });
 
-  test('shows an unsupported notice when the File System Access API is missing', async ({ page }) => {
-    await page.addInitScript(() => {
+  it('shows an unsupported notice when the File System Access API is missing', async () => {
+    // Must run LAST: this init script shadows the picker mocks above on
+    // every subsequent navigation of the shared session.
+    await browser.addInitScript(() => {
       // Shadow the globals before the app loads (simulates Firefox/Safari)
       window.showSaveFilePicker = undefined;
       window.showOpenFilePicker = undefined;
     });
-    await page.goto('/');
+    await browser.url('/');
 
-    const notice = page.locator('file-storage-component .file-storage-unsupported');
-    await expect(notice).toBeVisible();
-    await expect(notice).toContainText('File System Access API is not available');
-    await expect(
-      page.locator('file-storage-component button', { hasText: 'Export database to file' })
-    ).toHaveCount(0);
+    const notice = $('file-storage-component .file-storage-unsupported');
+    await expect(notice).toBeDisplayed();
+    await expect(notice).toHaveText(
+      expect.stringContaining('File System Access API is not available')
+    );
+    expect((await $$('file-storage-component button')).length).toBe(0);
   });
 });

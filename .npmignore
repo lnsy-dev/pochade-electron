@@ -1,4 +1,41 @@
-node_modules
-template/node_modules
-template/dist
-template/release
+# Root-only files not meant for the published package
+/index.html
+/package-lock.json
+
+# Dependency directories
+node_modules/
+
+# Build and packaging output
+dist/
+release/
+
+# Test artifacts
+wdio-*/
+
+# WebAssembly intermediate build artifacts (keep pre-built ones)
+*.o
+*.a
+src/wasm/rust/**/target/
+
+# Logs and OS noise
+*.log
+.DS_Store
+*.tgz
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Version control
+.git/
+.gitignore
+
+# The same patterns apply under template/ because the CLI copies it wholesale.
+# These explicit entries ensure artifacts generated while testing the template
+# are never shipped to users.
+template/node_modules/
+template/dist/
+template/release/
+template/wdio-*/
+template/src/wasm/rust/**/target/

@@ -4,62 +4,69 @@
  * End-to-end tests for the C++ WebAssembly demo component.
  */
 
-import { test, expect } from '@playwright/test';
+import { expect, browser } from '@wdio/globals';
+import { findButton, findByTextRegex } from '../helpers/e2e-utils.js';
 
-test.describe('WebAssembly C++ Component', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+describe('WebAssembly C++ Component', () => {
+  beforeEach(async () => {
+    await browser.url('/');
   });
 
-  test('renders the heading', async ({ page }) => {
-    const heading = page.locator('wasm-cpp-component h2');
+  it('renders the heading', async () => {
+    const heading = $('wasm-cpp-component h2');
     await expect(heading).toHaveText('WebAssembly C++ Example');
   });
 
-  test('computes fibonacci correctly', async ({ page }) => {
-    const input = page.locator('wasm-cpp-component input');
-    const button = page.locator('wasm-cpp-component button', { hasText: 'Compute (C++)' });
-    const result = page.locator('wasm-cpp-component p', { hasText: /^fib\(\d+\) = \d+$/ });
+  it('computes fibonacci correctly', async () => {
+    const input = $('wasm-cpp-component input');
 
-    await input.fill('10');
-    await button.click();
+    await input.setValue('10');
+    await (await findButton('wasm-cpp-component', 'Compute (C++)')).click();
 
-    // Wait for result with a generous timeout (wasm instantiation can take time)
-    await expect(result).toContainText('fib(10) = 55', { timeout: 15000 });
+    // Generous default timeout — wasm instantiation can take time.
+    const result = await findByTextRegex(
+      'wasm-cpp-component p',
+      /^fib\(\d+\) = \d+$/
+    );
+    await expect(result).toHaveText(expect.stringContaining('fib(10) = 55'));
   });
 
-  test('computes fibonacci for edge case n=0', async ({ page }) => {
-    const input = page.locator('wasm-cpp-component input');
-    const button = page.locator('wasm-cpp-component button', { hasText: 'Compute (C++)' });
-    const result = page.locator('wasm-cpp-component p', { hasText: /^fib\(\d+\) = \d+$/ });
+  it('computes fibonacci for edge case n=0', async () => {
+    const input = $('wasm-cpp-component input');
 
-    await input.fill('0');
-    await button.click();
+    await input.setValue('0');
+    await (await findButton('wasm-cpp-component', 'Compute (C++)')).click();
 
-    await expect(result).toContainText('fib(0) = 0', { timeout: 15000 });
+    const result = await findByTextRegex(
+      'wasm-cpp-component p',
+      /^fib\(\d+\) = \d+$/
+    );
+    await expect(result).toHaveText(expect.stringContaining('fib(0) = 0'));
   });
 
-  test('emits WASM-CPP-RESULT event', async ({ page }) => {
-    const eventPromise = page.evaluate(() => {
-      return new Promise((resolve) => {
+  it('emits WASM-CPP-RESULT event', async () => {
+    // Store the event promise on window first (non-blocking), trigger
+    // the computation, then await the stored promise.
+    await browser.execute(() => {
+      window.__cppEventPromise = new Promise((resolve) => {
         const el = document.querySelector('wasm-cpp-component');
         if (!el) {
           resolve(null);
           return;
         }
-        el.addEventListener('WASM-CPP-RESULT', (e) => {
-          resolve(e.detail);
-        }, { once: true });
+        el.addEventListener(
+          'WASM-CPP-RESULT',
+          (e) => resolve(e.detail),
+          { once: true }
+        );
       });
     });
 
-    const input = page.locator('wasm-cpp-component input');
-    const button = page.locator('wasm-cpp-component button', { hasText: 'Compute (C++)' });
+    const input = $('wasm-cpp-component input');
+    await input.setValue('7');
+    await (await findButton('wasm-cpp-component', 'Compute (C++)')).click();
 
-    await input.fill('7');
-    await button.click();
-
-    const detail = await eventPromise;
+    const detail = await browser.execute(() => window.__cppEventPromise);
     expect(detail).not.toBeNull();
     expect(detail.n).toBe(7);
     expect(detail.result).toBe(13);

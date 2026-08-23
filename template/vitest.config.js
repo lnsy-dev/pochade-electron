@@ -5,8 +5,8 @@
  *
  * For LLMs: Vitest runs the fast unit tests in tests/unit/. It is
  * deliberately scoped to that directory so it never picks up the
- * Playwright specs under tests/e2e/ (Playwright likewise ignores
- * tests/unit/ via testIgnore in playwright.config.js).
+ * WebdriverIO e2e specs under tests/e2e/ (WebdriverIO likewise only
+ * matches tests/e2e/ via its specs glob in wdio.conf.js).
  *
  * Unit tests import modules from src/ directly. Worker-based and
  * browser-API code is tested with explicit mocks (see
@@ -39,7 +39,7 @@ export default defineConfig({
   },
   test: {
     /**
-     * Only run unit tests — never Playwright specs.
+     * Only run unit tests — never WebdriverIO e2e specs.
      */
     include: ['tests/unit/**/*.test.js'],
 

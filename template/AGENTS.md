@@ -13,7 +13,7 @@ This file governs all code in this directory and its subdirectories.
 - **Local Files**: Chrome's File System Access API (`showSaveFilePicker` / `showOpenFilePicker`)
 - **Workers**: Web Workers (classic inline bundling, plus one native module worker for SQLite)
 - **WebAssembly**: C++ via Emscripten, Rust via wasm-pack
-- **Testing**: Playwright (e2e) and Vitest (unit) — see the Testing section below
+- **Testing**: WebdriverIO (e2e) and Vitest (unit) — see the Testing section below
 
 ## Code Style
 
@@ -110,13 +110,14 @@ const worker = new Worker(new URL('./my-worker.js', import.meta.url), { type: 'm
 
 **Directive:** Write and run tests for every feature you add or change. Keep both suites green, and add a matching test whenever you introduce new behavior.
 
-#### E2E Tests (Playwright)
+#### E2E Tests (WebdriverIO)
 
-- Use `@playwright/test`; place tests in `tests/e2e/*.spec.js`
-- Run with `npm test`; debug with `npm run test:ui`; first run needs `npx playwright install chromium`
-- Use `page.locator()` for element selection and `page.evaluate()` for custom events
-- Use 15-second timeouts for wasm-dependent assertions
-- The File System Access pickers (`showSaveFilePicker`/`showOpenFilePicker`) are native dialogs that automation cannot click — stub them with `page.addInitScript()` and assert how the app drives the API, as in `tests/e2e/file-storage-component.spec.js`
+- Use `webdriverio` globals (`browser`, `$`, `$$`, `expect` from `@wdio/globals`); place tests in `tests/e2e/*.spec.js`
+- Run with `npm test`; the webpack dev server starts automatically via `onPrepare` in `wdio.conf.js`. Requires a local Chrome install (ChromeDriver is downloaded automatically)
+- Use `$("selector")` for element selection and `browser.execute()` for custom events; shared helpers live in `tests/helpers/e2e-utils.js` (`findButton`, `addNote`, …)
+- Use 15-second timeouts for wasm-dependent assertions (`browser.waitUntil(..., { timeout: 15000 })`)
+- One browser session is SHARED across tests in a spec file and OPFS data persists across navigations — specs that touch `<db-component>` must call `clearExistingEntries()` in `beforeEach`
+- The File System Access pickers (`showSaveFilePicker`/`showOpenFilePicker`) are native dialogs that automation cannot click — stub them with `browser.addInitScript()` and assert how the app drives the API, as in `tests/e2e/file-storage-component.spec.js`. Init scripts accumulate over the session, so later mocks must overwrite earlier ones and conflicting tests must run last
 - The wasm e2e specs (`wasm-cpp-component.spec.js`, `wasm-rust-component.spec.js`) exist only when the corresponding WASM option was selected at scaffolding time
 
 #### Unit Tests (Vitest)

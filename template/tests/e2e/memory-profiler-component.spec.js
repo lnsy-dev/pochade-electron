@@ -3,23 +3,22 @@
  *
  * The overlay is normally only visible inside Electron when the app is
  * launched with --memory-profiler. These tests stub the Electron preload
- * API with page.addInitScript() so the component can be exercised in the
- * Playwright browser as well.
+ * API with browser.addInitScript() so the component can be exercised in
+ * the WebdriverIO browser as well.
  */
 
-import { test, expect } from '@playwright/test';
+import { expect, browser, $ } from '@wdio/globals';
 
 /**
  * Install a mock electronProfiler bridge into the page.
  *
  * The real bridge is injected by Electron's preload script; here we
- * provide a manual equivalent so the web-only Playwright browser can
- * trigger enable/metrics callbacks.
- *
- * @param {import('@playwright/test').Page} page
+ * provide a manual equivalent so the web-only test browser can trigger
+ * enable/metrics callbacks. addInitScript runs before any page script
+ * on every navigation of this session.
  */
-async function installMockProfilerBridge(page) {
-  await page.addInitScript(() => {
+async function installMockProfilerBridge() {
+  await browser.addInitScript(() => {
     window.__profilerCallbacks = {
       enabled: [],
       metrics: [],
@@ -34,22 +33,18 @@ async function installMockProfilerBridge(page) {
 
 /**
  * Notify all registered enabled callbacks.
- *
- * @param {import('@playwright/test').Page} page
  */
-async function enableProfiler(page) {
-  await page.evaluate(() => {
+async function enableProfiler() {
+  await browser.execute(() => {
     window.__profilerCallbacks.enabled.forEach((callback) => callback());
   });
 }
 
 /**
  * Send a sample metrics payload to all registered metrics callbacks.
- *
- * @param {import('@playwright/test').Page} page
  */
-async function sendSampleMetrics(page) {
-  await page.evaluate(() => {
+async function sendSampleMetrics() {
+  await browser.execute(() => {
     const metrics = {
       timestamp: Date.now(),
       totalMemoryMB: 123.45,
@@ -63,50 +58,50 @@ async function sendSampleMetrics(page) {
   });
 }
 
-test.describe('Memory Profiler Component', () => {
-  test.beforeEach(async ({ page }) => {
-    await installMockProfilerBridge(page);
-    await page.goto('/');
+describe('Memory Profiler Component', () => {
+  beforeEach(async () => {
+    await installMockProfilerBridge();
+    await browser.url('/');
   });
 
-  test('is hidden by default', async ({ page }) => {
-    const profiler = page.locator('memory-profiler-component');
-    await expect(profiler).toBeHidden();
+  it('is hidden by default', async () => {
+    const profiler = $('memory-profiler-component');
+    await expect(profiler).not.toBeDisplayed();
   });
 
-  test('appears when the profiler is enabled', async ({ page }) => {
-    const profiler = page.locator('memory-profiler-component');
-    await expect(profiler).toBeHidden();
+  it('appears when the profiler is enabled', async () => {
+    const profiler = $('memory-profiler-component');
+    await expect(profiler).not.toBeDisplayed();
 
-    await enableProfiler(page);
-    await expect(profiler).toBeVisible();
+    await enableProfiler();
+    await expect(profiler).toBeDisplayed();
   });
 
-  test('renders totals and process breakdown after receiving metrics', async ({ page }) => {
-    const profiler = page.locator('memory-profiler-component');
+  it('renders totals and process breakdown after receiving metrics', async () => {
+    const profiler = $('memory-profiler-component');
 
-    await enableProfiler(page);
-    await sendSampleMetrics(page);
+    await enableProfiler();
+    await sendSampleMetrics();
 
-    const summary = profiler.locator('.profiler-summary');
-    await expect(summary).toContainText('123.5 MB');
-    await expect(summary).toContainText('12.3%');
+    const summary = profiler.$('.profiler-summary');
+    await expect(summary).toHaveText(expect.stringContaining('123.5 MB'));
+    await expect(summary).toHaveText(expect.stringContaining('12.3%'));
 
-    const processes = profiler.locator('.profiler-processes');
-    await expect(processes).toContainText('Browser');
-    await expect(processes).toContainText('Renderer');
-    await expect(processes).toContainText('45.1 MB');
-    await expect(processes).toContainText('78.4 MB');
-    await expect(processes).toContainText('2.3%');
-    await expect(processes).toContainText('10.0%');
+    const processes = profiler.$('.profiler-processes');
+    await expect(processes).toHaveText(expect.stringContaining('Browser'));
+    await expect(processes).toHaveText(expect.stringContaining('Renderer'));
+    await expect(processes).toHaveText(expect.stringContaining('45.1 MB'));
+    await expect(processes).toHaveText(expect.stringContaining('78.4 MB'));
+    await expect(processes).toHaveText(expect.stringContaining('2.3%'));
+    await expect(processes).toHaveText(expect.stringContaining('10.0%'));
   });
 
-  test('shows an age line after receiving metrics', async ({ page }) => {
-    const profiler = page.locator('memory-profiler-component');
+  it('shows an age line after receiving metrics', async () => {
+    const profiler = $('memory-profiler-component');
 
-    await enableProfiler(page);
-    await sendSampleMetrics(page);
+    await enableProfiler();
+    await sendSampleMetrics();
 
-    await expect(profiler.locator('.profiler-age')).toContainText('Updated');
+    await expect(profiler.$('.profiler-age')).toHaveText(expect.stringContaining('Updated'));
   });
 });

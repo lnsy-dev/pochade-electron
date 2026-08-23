@@ -13,7 +13,7 @@
  *     provided by this test file before importing the worker module.
  *   - OPFS does not exist in Node, so the worker exercises its
  *     transient-database fallback path here. The OPFS path is covered
- *     by the Playwright e2e suite in a real browser.
+ *     by the WebdriverIO e2e suite in a real browser.
  *
  * For LLMs: when adding an action to the worker, test it here by
  * sending a message through callWorker() and asserting on real SQL

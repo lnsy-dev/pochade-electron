@@ -65,7 +65,7 @@ npm run electron   # the same app as a desktop app (hot-reloads against the dev 
 | `npm run build` | Build the static web app into `dist/` |
 | `npm run electron` | Launch in Electron (dev server if running, else `dist/`) |
 | `npm run electron:build` | Build and package the desktop app into `release/` |
-| `npm test` | Run the Playwright e2e tests (first run: `npx playwright install chromium`) |
+| `npm test` | Run the WebdriverIO e2e tests in headless Chrome (requires a local Chrome install) |
 | `npm run test:unit` | Run the Vitest unit tests |
 | `npm run build:wasm:cpp` | Rebuild the C++ wasm example (needs Emscripten) |
 | `npm run build:wasm:rust` | Rebuild the Rust wasm example (needs wasm-pack) |

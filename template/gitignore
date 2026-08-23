@@ -37,10 +37,8 @@ dist/
 # Electron packaging output
 release/
 
-# Playwright test artifacts
-test-results/
-playwright-report/
-playwright/.cache/
+# WebdriverIO test artifacts
+wdio-*/
 
 # WebAssembly intermediate build artifacts (keep pre-built ones)
 *.o
