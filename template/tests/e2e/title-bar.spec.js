@@ -30,4 +30,16 @@ describe('transparent title bar', () => {
 
     expect(titleBarHeight).toBe('2.5rem');
   });
+
+  it('has a draggable title bar region at the top of the window', async () => {
+    const titleBar = await $('.title-bar');
+    await expect(titleBar).toExist();
+
+    const appRegion = await browser.execute(
+      () => window.getComputedStyle(document.querySelector('.title-bar'))
+        .getPropertyValue('-webkit-app-region')
+    );
+
+    expect(appRegion).toBe('drag');
+  });
 });
