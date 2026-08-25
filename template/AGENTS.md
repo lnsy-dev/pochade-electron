@@ -1,6 +1,18 @@
+<!-- Version: 0.1.0 -->
+
 # Agent Conventions for Pochade-Electron Projects
 
 This file governs all code in this directory and its subdirectories.
+
+## Versioning
+
+This document follows [Semantic Versioning](https://semver.org/). Current version: **0.1.0**
+
+Whenever you change this file, update the version in the comment above using these rules:
+
+- **MAJOR** (`X.0.0`): Breaking changes — removing conventions, reversing existing rules, or changing patterns that invalidate current code
+- **MINOR** (`0.X.0`): New conventions added — new sections, new allowed patterns, or new tooling guidance that doesn't affect existing code
+- **PATCH** (`0.0.X`): Clarifications, typo fixes, rewordings, or formatting changes with no change in meaning
 
 ## Technology Stack
 
