@@ -21,6 +21,7 @@
   "scripts": {
     "start": "webpack serve",
     "build": "NODE_ENV=production webpack build",
+    "preelectron": "npm run build",
     "electron": "node electron/dev-runner.js",
     "electron:build": "npm run build && electron-builder",
     "build:wasm:cpp": "cd src/wasm/cpp && make",
