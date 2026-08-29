@@ -413,6 +413,28 @@ function configureWasmSupport(projectDir, config) {
 }
 
 /**
+ * Initializes an empty Git repository in the project directory
+ *
+ * @param {string} projectDir - The project directory path
+ * @returns {void}
+ */
+function initGitRepository(projectDir) {
+  const gitDir = path.join(projectDir, '.git');
+  if (fs.existsSync(gitDir)) {
+    return;
+  }
+
+  const result = spawn.sync('git', ['init'], {
+    cwd: projectDir,
+    stdio: 'ignore'
+  });
+
+  if (result.status !== 0) {
+    console.warn('\n⚠️ Warning: Could not initialize Git repository.');
+  }
+}
+
+/**
  * Main function to create a new Pochade-Electron project
  *
  * @returns {Promise<void>}
@@ -520,6 +542,9 @@ async function createProject() {
     packageJsonPath,
     JSON.stringify(projectPackageJson, null, 2)
   );
+
+  // Initialize an empty Git repository so the project is ready to track changes
+  initGitRepository(projectDir);
 
   console.log('\n📦 Installing dependencies (this includes Electron and may take a while)...');
 
