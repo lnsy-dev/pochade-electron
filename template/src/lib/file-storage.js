@@ -17,7 +17,7 @@
 /**
  * Check whether the File System Access API is available.
  *
- * Uses typeof-based detection: shadowing the globals with `undefined`
+ * Uses typeof-based detection: overriding the globals with `undefined`
  * (as test mocks do) is correctly reported as unsupported.
  *
  * @returns {boolean} True if save/open pickers exist

@@ -188,10 +188,10 @@ describe('File Storage Component (dialog UI)', () => {
   });
 
   it('shows an unsupported notice when the File System Access API is missing', async () => {
-    // Must run LAST: this init script shadows the picker mocks above on
+    // Must run LAST: this init script overrides the picker mocks above on
     // every subsequent navigation of the shared session.
     await browser.addInitScript(() => {
-      // Shadow the globals before the app loads (simulates Firefox/Safari)
+      // Override the globals before the app loads (simulates Firefox/Safari)
       window.showSaveFilePicker = undefined;
       window.showOpenFilePicker = undefined;
     });

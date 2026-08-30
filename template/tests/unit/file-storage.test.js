@@ -32,7 +32,7 @@ describe('file-storage', () => {
       expect(isFileSystemAccessSupported()).toBe(false);
     });
 
-    it('returns false when the pickers are shadowed with undefined', () => {
+    it('returns false when the pickers are overridden with undefined', () => {
       vi.stubGlobal('window', {
         showSaveFilePicker: undefined,
         showOpenFilePicker: undefined,

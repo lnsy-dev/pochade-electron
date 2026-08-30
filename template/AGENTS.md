@@ -1,4 +1,4 @@
-<!-- Version: 0.1.0 -->
+<!-- Version: 0.2.0 -->
 
 # Agent Conventions for Pochade-Electron Projects
 
@@ -6,7 +6,17 @@ This file governs all code in this directory and its subdirectories.
 
 ## Versioning
 
-This document follows [Semantic Versioning](https://semver.org/). Current version: **0.1.0**
+### Application Version
+
+The generated Electron app's `package.json` version starts at **0.1.0**. Whenever you update the app version for a build or release, follow [Semantic Versioning](https://semver.org/):
+
+- **MAJOR** (`X.0.0`): Breaking changes — removing or renaming user-facing features, changing data formats, or breaking the public API / protocol
+- **MINOR** (`0.X.0`): New features, capabilities, or non-breaking additions
+- **PATCH** (`0.0.X`): Bug fixes, performance improvements, or minor corrections with no new behavior
+
+### This Document
+
+This document follows [Semantic Versioning](https://semver.org/). Current version: **0.2.0**
 
 Whenever you change this file, update the version in the comment above using these rules:
 
