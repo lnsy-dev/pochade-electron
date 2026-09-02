@@ -125,10 +125,10 @@ const worker = new Worker(new URL('./my-worker.js', import.meta.url), { type: 'm
 #### E2E Tests (WebdriverIO)
 
 - Use `webdriverio` globals (`browser`, `$`, `$$`, `expect` from `@wdio/globals`); place tests in `tests/e2e/*.spec.js`
-- Run with `npm test`; the webpack dev server starts automatically via `onPrepare` in `wdio.conf.js`. Requires a local Chrome install (ChromeDriver is downloaded automatically)
+- Run with `npm test`; the webpack dev server starts automatically via `onPrepare` in `wdio.conf.js`. Tests run in the real Electron app: `electron-chromedriver` (version-locked to the `electron` package) launches the Electron binary with the project directory, so no system Chrome is involved
 - Use `$("selector")` for element selection and `browser.execute()` for custom events; shared helpers live in `tests/helpers/e2e-utils.js` (`findButton`, `addNote`, …)
 - Use 15-second timeouts for wasm-dependent assertions (`browser.waitUntil(..., { timeout: 15000 })`)
-- One browser session is SHARED across tests in a spec file and OPFS data persists across navigations — specs that touch `<db-component>` must call `clearExistingEntries()` in `beforeEach`
+- One Electron session is SHARED across tests in a spec file and OPFS data persists across navigations — specs that touch `<db-component>` must call `clearExistingEntries()` in `beforeEach`
 - The File System Access pickers (`showSaveFilePicker`/`showOpenFilePicker`) are native dialogs that automation cannot click — stub them with `browser.addInitScript()` and assert how the app drives the API, as in `tests/e2e/file-storage-component.spec.js`. Init scripts accumulate over the session, so later mocks must overwrite earlier ones and conflicting tests must run last
 - The wasm e2e specs (`wasm-cpp-component.spec.js`, `wasm-rust-component.spec.js`) exist only when the corresponding WASM option was selected at scaffolding time
 

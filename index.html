@@ -531,7 +531,7 @@
       </article>
       <article>
         <h3>Tests Included</h3>
-        <p>Playwright end-to-end tests and Vitest unit tests ship with the template, ready to run.</p>
+        <p>WebdriverIO end-to-end tests run the real Electron app, and Vitest unit tests ship with the template, ready to run.</p>
       </article>
       <article>
         <h3>AI Context</h3>
@@ -571,7 +571,7 @@
         <tr><td>npm run build</td><td>Build the static web app into <code>dist/</code></td></tr>
         <tr><td>npm run electron</td><td>Launch in Electron (dev server if running, else <code>dist/</code>)</td></tr>
         <tr><td>npm run electron:build</td><td>Build and package the desktop app into <code>release/</code></td></tr>
-        <tr><td>npm test</td><td>Run the Playwright e2e tests (first run: <code>npx playwright install chromium</code>)</td></tr>
+        <tr><td>npm test</td><td>Run the WebdriverIO e2e tests in the real Electron app (headless CI: install <code>xvfb</code>)</td></tr>
         <tr><td>npm run test:unit</td><td>Run the Vitest unit tests</td></tr>
         <tr><td>npm run build:wasm:cpp</td><td>Rebuild the C++ wasm example (needs Emscripten)</td></tr>
         <tr><td>npm run build:wasm:rust</td><td>Rebuild the Rust wasm example (needs wasm-pack)</td></tr>
@@ -591,7 +591,7 @@
 │   ├── <span class="file">file-storage-component.js</span>
 │   └── <span class="file">sqlite-worker.js</span> <span class="comment"># sqlite-wasm module worker</span>
 ├── <span class="dir">styles/</span>              <span class="comment"># CSS files (one per component)</span>
-├── <span class="dir">tests/</span>               <span class="comment"># Playwright e2e + Vitest unit tests</span>
+├── <span class="dir">tests/</span>               <span class="comment"># WebdriverIO e2e + Vitest unit tests</span>
 ├── <span class="dir">scripts/</span>             <span class="comment"># Build scripts</span>
 ├── <span class="file">index.html</span>           <span class="comment"># Main HTML file</span>
 ├── <span class="file">index.js</span>             <span class="comment"># Main JS entry point</span>

@@ -1,10 +1,10 @@
 /**
  * E2E Test Utilities (WebdriverIO)
  *
- * Shared helpers for the WebdriverIO e2e specs. Unlike Playwright,
- * WebdriverIO reuses one browser session per spec file, so database
- * state persists between tests — suites that touch the <db-component>
- * must call clearExistingEntries() in beforeEach.
+ * Shared helpers for the WebdriverIO e2e specs, which run inside the
+ * real Electron app. One session is reused per spec file and database
+ * state persists between tests, so suites that touch the
+ * <db-component> must call clearExistingEntries() in beforeEach.
  */
 
 import { browser, $, $$, expect } from '@wdio/globals';

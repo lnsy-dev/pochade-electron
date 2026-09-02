@@ -56,11 +56,13 @@ Builds the web app and packages it with electron-builder into `release/` (macOS,
 
 ## Testing
 
-End-to-end tests (WebdriverIO) cover the full app in a real (headless) browser — database reads/writes, OPFS persistence across reloads, the WASM demos, and the File System Access dialog flows (the native pickers are stubbed via `browser.addInitScript`, since automation cannot click OS dialogs). Requires a local Chrome install; ChromeDriver is managed automatically:
+End-to-end tests (WebdriverIO) drive the real Electron app — the same binary `npm run electron` launches — through `electron-chromedriver`, which is version-locked to Electron's bundled Chromium (no system Chrome involved). They cover database reads/writes, OPFS persistence across reloads, the WASM demos, and the File System Access dialog flows (the native pickers are stubbed via `browser.addInitScript`, since automation cannot click OS dialogs):
 
 ```bash
 npm test
 ```
+
+On a desktop the app window simply opens while tests run. On headless Linux CI, install xvfb (`apt install xvfb` / `dnf install xorg-x11-server-Xvfb`) — WebdriverIO's built-in `autoXvfb` wraps the tests with `xvfb-run` automatically when no display is present.
 
 Unit tests (Vitest) cover the libraries in `src/lib/` and the sqlite worker's message protocol against a real in-memory SQLite:
 
@@ -68,7 +70,7 @@ Unit tests (Vitest) cover the libraries in `src/lib/` and the sqlite worker's me
 npm run test:unit
 ```
 
-The e2e suite starts and stops the webpack dev server automatically (`onPrepare`/`onComplete` hooks in `wdio.conf.js`).
+The e2e suite starts and stops the webpack dev server automatically (`onPrepare`/`onComplete` hooks in `wdio.conf.js`), and the Electron main process loads that dev server exactly like `npm run electron` does.
 
 ## Local Storage Architecture
 
