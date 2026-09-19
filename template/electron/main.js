@@ -33,6 +33,8 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
+import { updateElectronApp } from 'update-electron-app';
+import electronSquirrelStartup from 'electron-squirrel-startup';
 import { WINDOW_OPTIONS } from './window-options.js';
 import { isProfilerEnabled, collectMetrics } from './profiler.js';
 import { resolveStartUrl } from './dev-server.js';
@@ -40,6 +42,15 @@ import { createDatabaseService } from './database.js';
 
 /** IPC channel the renderer uses to reach the database service. */
 const DB_CHANNEL = 'pochade-db';
+
+// Squirrel.Windows (the Windows installer format required for auto-updates)
+// launches the app executable with special flags while it installs, updates,
+// or uninstalls. Without this guard the window would pop open mid-update and
+// Windows Start Menu shortcuts would never be created. It is a no-op on
+// macOS and Linux.
+if (electronSquirrelStartup) {
+  app.quit();
+}
 
 // Load project-specific environment variables (PORT, ELECTRON_DEV_URL, etc.)
 // so the dev server URL matches the one generated when the project was created.
@@ -179,10 +190,33 @@ async function createWindow() {
   win.loadURL(startUrl);
 }
 
+/**
+ * Check update.electronjs.org for a newer packaged release and keep checking
+ * every ten minutes. When an update is found it downloads in the background
+ * and the user is offered a "Restart / Later" dialog.
+ *
+ * Only meaningful in packaged builds: update.electronjs.org serves releases
+ * from the public GitHub repository configured in package.json (`repository`
+ * must point at https://github.com/<owner>/<repo>). Guarded with
+ * app.isPackaged so development never touches the network feed. See
+ * README.md → "Releases & Auto-Updates".
+ */
+function startAutoUpdater() {
+  if (!app.isPackaged) {
+    return;
+  }
+  try {
+    updateElectronApp();
+  } catch (error) {
+    console.error('Auto-updater could not start:', error);
+  }
+}
+
 app.whenReady().then(() => {
   protocol.handle('app', handleAppRequest);
   startDatabaseService();
   createWindow();
+  startAutoUpdater();
 
   // macOS: re-create the window when the dock icon is clicked
   app.on('activate', () => {

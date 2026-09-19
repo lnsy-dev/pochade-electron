@@ -141,7 +141,7 @@ async function collectProjectInfo(projectName) {
     project_sitename: await ask(reader, 'Project site name', projectName),
     author_name: await ask(reader, 'Author name', ''),
     author_email: await ask(reader, 'Author email', ''),
-    github_username: await ask(reader, 'GitHub username', ''),
+    github_username: await ask(reader, 'GitHub username (public repo will serve auto-updates)', ''),
     license: await ask(reader, 'License', 'Unlicense'),
     wasm_choice: wasmChoice
   };
@@ -575,6 +575,24 @@ async function createProject() {
   console.log('    Runs the WebdriverIO end-to-end tests in headless Chrome (requires a local Chrome install).');
   console.log('\n  npm run test:unit');
   console.log('    Runs the Vitest unit tests.');
+
+  // Release / auto-update instructions only make sense with a repository,
+  // because the packaged apps poll update.electronjs.org using the
+  // `repository` field of package.json.
+  if (config.github_username) {
+    const repoUrl = `https://github.com/${config.github_username}/${config.project_name}`;
+    console.log('\n🚀 Releasing updates to your clients:');
+    console.log(`    1. Create the public repo and push:  gh repo create ${repoUrl} --public --source . --push`);
+    console.log('    2. Publish a release:  git tag vX.Y.Z && git push origin vX.Y.Z');
+    console.log('       CI builds installers for macOS, Windows, and Linux and publishes');
+    console.log('       the GitHub Release. Installed apps then auto-update via');
+    console.log('       update.electronjs.org (startup + every 10 minutes).');
+    console.log('    3. Ship a new version: bump `version` in package.json, commit,');
+    console.log('       tag the commit with the next vX.Y.Z, and push the tag.');
+    console.log('    macOS auto-updates additionally require code-signed builds — see');
+    console.log('    README.md → "Releases & Auto-Updates".');
+  }
+
   console.log('\n💡 We suggest that you begin by typing:');
   console.log(`\n  cd ${projectName}`);
   console.log('  npm start');

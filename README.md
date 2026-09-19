@@ -19,6 +19,7 @@ Pochade-Electron provides a streamlined development environment with:
 
 - **Dual targets** - One codebase: `npm run build` produces a static web app (`dist/`), `npm run electron` runs it as a desktop app, `npm run electron:build` packages it with electron-builder
 - **SQLite in the browser** - [`@sqlite.org/sqlite-wasm`](https://www.npmjs.com/package/@sqlite.org/sqlite-wasm) running in a web worker, with read/write of entries and index generation out of the box
+- **Auto-updates** - Tag a release (`git tag vX.Y.Z && git push origin vX.Y.Z`) and GitHub Actions builds installers for macOS, Windows, and Linux, publishes them to GitHub Releases, and installed clients self-update via [update.electronjs.org](https://www.electronjs.org/docs/latest/tutorial/updates)
 - **Chrome file APIs for local storage** - OPFS (Origin Private File System) persistence for the database, plus the File System Access API (`showSaveFilePicker` / `showOpenFilePicker`) to export/import the database file — both work in Chrome and in Electron's renderer
 - **Custom HTML Elements** - Built-in support for [dataroom-js](https://github.com/DATAROOM-NETWORK/dataroom.js)
 - **WebAssembly** - Optional C++ (Emscripten) and/or Rust (wasm-pack) examples, with prebuilt binaries so it works before you install any toolchain

@@ -1,4 +1,4 @@
-<!-- Version: 0.2.0 -->
+<!-- Version: 0.3.0 -->
 
 # Agent Conventions for Pochade-Electron Projects
 
@@ -16,7 +16,7 @@ The generated Electron app's `package.json` version starts at **0.1.0**. Wheneve
 
 ### This Document
 
-This document follows [Semantic Versioning](https://semver.org/). Current version: **0.2.0**
+This document follows [Semantic Versioning](https://semver.org/). Current version: **0.3.0**
 
 Whenever you change this file, update the version in the comment above using these rules:
 
@@ -93,6 +93,14 @@ Rules:
 - The renderer is plain web code: `contextIsolation: true`, `nodeIntegration: false` — do not add Node APIs to renderer code
 - `ELECTRON_DEV_URL` is read from `.env` (default `http://localhost:3000`). Electron only loads the dev server when the probe receives an OK response with the `X-Pochade-Dev-Server` identity header; otherwise it falls back to `app://./index.html`
 - Packaging config (electron-builder) lives in the `build` field of `package.json`
+
+### Releases & Auto-Updates
+
+- Packaged apps self-update via update.electronjs.org (see README.md → "Releases & Auto-Updates"). `electron/main.js` initializes it through `update-electron-app` inside `startAutoUpdater()`, guarded by `app.isPackaged` — do not call updater code anywhere else and never run it in development
+- `electron-squirrel-startup` is imported at the top of `electron/main.js` and quits the app when Squirrel.Windows launches it during install/update/uninstall. Do not remove this guard: it creates Windows shortcuts and prevents windows popping up mid-update
+- Windows is packaged with the `squirrel` target (NOT nsis) because Electron's built-in autoUpdater can only update Squirrel-installed apps; the `electron-builder-squirrel-windows` dev dependency provides that target
+- To ship an update: bump `version` in `package.json`, commit, `git tag vX.Y.Z && git push origin vX.Y.Z`. CI (`.github/workflows/release.yml`) builds all platforms, attaches installers to a GitHub Release, and publishes the draft. Never hand-edit releases that CI created
+- The updater resolves its feed from the `repository` field of `package.json`; if you rename or move the GitHub repo, update that field in the same change
 
 ### Web Workers
 

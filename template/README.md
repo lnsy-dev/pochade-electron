@@ -52,7 +52,37 @@ Creates a `dist` folder with the bundled and optimized files — a static site y
 npm run electron:build
 ```
 
-Builds the web app and packages it with electron-builder into `release/` (macOS, Windows NSIS, Linux AppImage). Packaging identity (`appId`, `productName`) lives in the `build` field of `package.json`.
+Builds the web app and packages it with electron-builder into `release/` (macOS DMG + zip, Windows Squirrel installer, Linux AppImage). Packaging identity (`appId`, `productName`) lives in the `build` field of `package.json`.
+
+Windows uses the Squirrel.Windows target (not NSIS) because the built-in Electron auto-updater can only apply updates to apps installed via Squirrel.
+
+## Releases & Auto-Updates
+
+Packaged apps keep themselves up to date via [update.electronjs.org](https://www.electronjs.org/docs/latest/tutorial/updates) — Electron's free, official update service for apps with a public GitHub repository. `electron/main.js` starts the updater (through the [`update-electron-app`](https://github.com/electron/update-electron-app) module) when a **packaged** app launches and re-checks every ten minutes; development (`npm run electron`) never contacts the feed.
+
+When an update is found it is downloaded in the background and the user is offered a **Restart / Later** dialog.
+
+### How to ship an update
+
+1. Bump `version` in `package.json` (the updater compares versions semantically, so every release needs a new one) and commit.
+2. Tag the commit and push it:
+
+   ```bash
+   git tag vX.Y.Z
+   git push origin vX.Y.Z
+   ```
+
+3. GitHub Actions (`.github/workflows/release.yml`) builds the app for macOS, Windows, and Linux and publishes a GitHub Release with the installers.
+4. Installed clients pick the new version up on their next check (at startup or within ten minutes).
+
+### Requirements
+
+- The `repository` field of `package.json` must point at the app's **public** GitHub repository — the updater resolves the feed URL (`https://update.electronjs.org/<owner>/<repo>/<platform>-<arch>/<version>`) from it. Keep the repo name in sync with what you enter at `npx pochade-electron` scaffolding time.
+- **macOS builds must be code-signed** for installed macOS clients to accept updates. Add `MAC_CERTS` (a base64-encoded Developer ID `.p12`) and `MAC_CERTS_PASSWORD` repository secrets to sign automatically in CI (the workflow documents the exact `CSC_LINK` / `CSC_KEY_PASSWORD` wiring). Windows and Linux releases work unsigned.
+- CI builds macOS for the runner architecture (arm64 / Apple Silicon). To also serve Intel Macs, extend `build.mac` with `"arch": ["arm64", "x64"]` (or `universal`).
+- Releases must be **published** (not drafts) — the release workflow publishes the draft automatically after all platform builds finish.
+- Development builds (`npm run electron`) never check for updates; only `npm run electron:build` output does.
+- update.electronjs.org caches feed responses for ~15 minutes, so a freshly published release can take a few minutes to reach clients.
 
 ## Testing
 
@@ -127,6 +157,7 @@ See `src/wasm-cpp-component.js` and `src/wasm-rust-component.js` for how to load
 ## Technologies
 
 - **Electron** - Desktop app runtime and packaging (electron-builder)
+- **update-electron-app** - Auto-updates via update.electronjs.org on every release
 - **sqlite-wasm** - SQLite compiled to WebAssembly, with OPFS persistence
 - **File System Access API** - Chrome's API for reading/writing local files
 - **Webpack** - Bundler for development and production
