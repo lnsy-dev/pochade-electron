@@ -44,9 +44,9 @@
   <section id="database-example">
     <!--
       Database Component
-      Demonstrates sqlite-wasm in a web worker: read/write entries and
-      index generation, persisted locally in OPFS (Origin Private
-      File System).
+      Demonstrates node:sqlite in the Electron main process:
+      read/write entries and index generation, persisted to a real
+      SQLite file on disk (sessionData/app.sqlite3).
     -->
     <db-component id="db_component"></db-component>
   </section>

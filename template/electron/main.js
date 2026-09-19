@@ -13,19 +13,22 @@
  *      privileged `app://` protocol registered below.
  *
  * Why a custom protocol instead of loadFile()? The app relies on web
- * platform features that need a real origin: module web workers,
- * fetching .wasm binaries, and OPFS (Origin Private File System)
- * persistence for the SQLite database. Serving dist/ over a standard,
- * secure scheme makes all of them behave exactly like they do on the
- * web — no special Electron-only code paths.
+ * platform features that need a real origin: module web workers and
+ * fetching .wasm binaries for the C++/Rust WebAssembly demos. Serving
+ * dist/ over a standard, secure scheme makes all of them behave exactly
+ * like they do on the web — no special Electron-only code paths.
+ *
+ * The SQLite database (node:sqlite DatabaseSync) lives in this process,
+ * behind an ipcMain.handle channel the preload script exposes to the
+ * renderer. The renderer keeps contextIsolation enabled and no
+ * nodeIntegration — it only ever sees the small bridge.
  *
  * For LLMs: this file runs in Node.js (Electron main), NOT in a browser.
  * Renderer code lives in src/ and index.js. Keep Node/Electron APIs here
- * and web APIs there; the renderer has contextIsolation enabled and no
- * nodeIntegration.
+ * and web APIs there.
  */
 
-import { app, BrowserWindow, protocol } from 'electron';
+import { app, BrowserWindow, ipcMain, protocol } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -33,6 +36,10 @@ import dotenv from 'dotenv';
 import { WINDOW_OPTIONS } from './window-options.js';
 import { isProfilerEnabled, collectMetrics } from './profiler.js';
 import { resolveStartUrl } from './dev-server.js';
+import { createDatabaseService } from './database.js';
+
+/** IPC channel the renderer uses to reach the database service. */
+const DB_CHANNEL = 'pochade-db';
 
 // Load project-specific environment variables (PORT, ELECTRON_DEV_URL, etc.)
 // so the dev server URL matches the one generated when the project was created.
@@ -136,6 +143,27 @@ function attachMemoryProfiler(win) {
 }
 
 /**
+ * Open the database service and expose it to the renderer over IPC.
+ *
+ * The database file lives in `sessionData`, so it persists across
+ * reloads and app restarts, while automated test runs (which pass a
+ * fresh `--user-data-dir`) start from a clean slate.
+ */
+function startDatabaseService() {
+  const filePath = path.join(app.getPath('sessionData'), 'app.sqlite3');
+  const service = createDatabaseService({ filePath });
+
+  ipcMain.handle(DB_CHANNEL, (_event, { action, params }) => {
+    return service.handle(action, params);
+  });
+
+  // Flush SQLite's state before the process exits
+  app.on('will-quit', () => {
+    service.close();
+  });
+}
+
+/**
  * Create the main application window.
  *
  * @returns {Promise<void>}
@@ -153,6 +181,7 @@ async function createWindow() {
 
 app.whenReady().then(() => {
   protocol.handle('app', handleAppRequest);
+  startDatabaseService();
   createWindow();
 
   // macOS: re-create the window when the dock icon is clicked

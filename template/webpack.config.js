@@ -37,14 +37,12 @@ const hasAssets = (() => {
 const isDev = process.env.NODE_ENV !== 'production';
 
 /**
- * A note on persistence.
+ * A note on the database.
  *
- * The SQLite database (src/sqlite-worker.js) persists in OPFS via
- * sqlite-wasm's "opfs-sahpool" VFS, which only needs the OPFS
- * sync-access-handle APIs available in any modern browser worker.
- * It does NOT require cross-origin isolation (no COOP/COEP headers,
- * no SharedArrayBuffer), so this dev server needs no special headers
- * and the production build can be hosted on any static file host.
+ * The SQLite database (node:sqlite) runs in the Electron main process
+ * (electron/database.js) and needs no special web platform features.
+ * The WebAssembly support configured below serves the C++/Rust demo
+ * components (Emscripten / wasm-pack), which DO need .wasm handling.
  *
  * Webpack Configuration
  *
@@ -52,9 +50,7 @@ const isDev = process.env.NODE_ENV !== 'production';
  * - Modern CSS processing (PostCSS + cssnano)
  * - Fast JavaScript transpilation (SWC)
  * - Web Worker inlining for single-file deployment (classic workers)
- * - Native module workers (the sqlite-wasm worker imports npm modules,
- *   so it uses webpack 5's built-in `new Worker(new URL(...), { type: 'module' })`)
- * - WebAssembly support for sqlite-wasm, C++ (Emscripten) and Rust (wasm-pack)
+ * - WebAssembly support for C++ (Emscripten) and Rust (wasm-pack)
  * - Static asset copying
  * - Environment-based customization
  */
@@ -64,16 +60,16 @@ export default {
     path: path.resolve(__dirname, 'dist'),
     filename: isDev ? '[name].js' : outputFileName,
     /**
-     * Additional chunks (module workers, dynamic import() of the
-     * Emscripten/wasm-pack glue code) need their own filename pattern
-     * so they do not collide with the fixed entry filename above.
+     * Additional chunks (dynamic import() of the Emscripten/wasm-pack
+     * glue code) need their own filename pattern so they do not
+     * collide with the fixed entry filename above.
      */
     chunkFilename: isDev ? '[name].js' : 'chunks/[name].min.js',
     clean: true,
     /**
-     * WebAssembly files need a predictable public path so that
-     * sqlite-wasm, Emscripten and wasm-pack generated modules can load
-     * their companion .wasm binaries at runtime.
+     * WebAssembly files need a predictable public path so that the
+     * Emscripten and wasm-pack generated modules can load their
+     * companion .wasm binaries at runtime.
      */
     publicPath: '/',
   },
@@ -94,10 +90,8 @@ export default {
     },
     /**
      * Show the full-screen error overlay for compilation ERRORS only.
-     * Our build always carries warnings we cannot fix (sqlite-wasm's
-     * dynamic requires and the 844 KiB wasm binary size); if the
-     * overlay reacted to those, it would cover the page and intercept
-     * all clicks — which also breaks e2e test automation.
+     * If the overlay reacted to warnings it would cover the page and
+     * intercept all clicks — which also breaks e2e test automation.
      */
     client: {
       overlay: {
@@ -171,12 +165,9 @@ export default {
       /**
        * WebAssembly file handling.
        * Webpack 5's asset/resource type emits .wasm files to the output
-       * directory and returns the public URL. This is necessary because
-       * sqlite-wasm, Emscripten and wasm-pack runtime loaders fetch the
-       * .wasm binary at runtime.
-       *
-       * The sqlite worker imports the binary with:
-       *   import wasmUrl from '@sqlite.org/sqlite-wasm/sqlite3.wasm';
+       * directory and returns the public URL. The Emscripten and
+       * wasm-pack runtime loaders fetch the .wasm binary at runtime via
+       *   import('./module.wasm')
        */
       {
         test: /\.wasm$/,

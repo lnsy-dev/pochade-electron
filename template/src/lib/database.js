@@ -1,97 +1,56 @@
 /**
  * Database Client Library
  *
- * Promise-based main-thread client for the sqlite worker
- * (src/sqlite-worker.js). All database access in the app should go
- * through this module — components never talk to the worker directly.
+ * Promise-based main-thread client for the application database.
+ * All database access in the app should go through this module —
+ * components never talk to Electron IPC directly.
  *
- * The lower half of the file is a generic request/response transport;
- * the upper half (exported helpers) is the app's domain API: a `notes`
- * table with create/read/delete plus index generation.
+ * The database itself is SQLite via Node's built-in `node:sqlite`
+ * module, running in the Electron MAIN process (electron/database.js).
+ * This file is a thin transport: every helper forwards an
+ * `{ action, params }` message through the `window.electronDb` bridge
+ * that electron/preload.js exposes, so the renderer (which has
+ * contextIsolation enabled and no nodeIntegration) never touches
+ * Node or the file system.
+ *
+ * Plain web browsers have no `node:sqlite` and no preload bridge —
+ * there the helpers reject with a descriptive error instead of
+ * silently failing.
  *
  * For LLMs: when adding a new table or query, add a helper here that
- * composes `callWorker('exec', ...)` / `callWorker('query', ...)`.
+ * composes `callDatabase('exec', ...)` / `callDatabase('query', ...)`.
  * Always use bound parameters (?) for user input — never string
  * interpolation into SQL.
  */
 
 /**
- * Lazily-created module worker instance.
+ * Forward a database action to the main process and await its result.
  *
- * Note the `{ type: 'module' }` option: this worker imports npm modules
- * and a .wasm URL, so it uses webpack 5's native module-worker support
- * instead of the classic inline-worker transform.
- *
- * @type {Worker|null}
- */
-let worker = null;
-
-/** @type {number} Monotonic request id counter */
-let nextRequestId = 1;
-
-/** @type {Map<number, {resolve: Function, reject: Function}>} In-flight requests */
-const pendingRequests = new Map();
-
-/**
- * Get (or create) the sqlite worker and wire up its message handler.
- *
- * @returns {Worker} The sqlite worker instance
- */
-function getWorker() {
-  if (worker) {
-    return worker;
-  }
-
-  worker = new Worker(new URL('../sqlite-worker.js', import.meta.url), { type: 'module' });
-
-  worker.onmessage = (event) => {
-    const { id, ok, result, error } = event.data;
-    const pending = pendingRequests.get(id);
-    if (!pending) {
-      return;
-    }
-    pendingRequests.delete(id);
-    if (ok) {
-      pending.resolve(result);
-    } else {
-      pending.reject(new Error(error));
-    }
-  };
-
-  worker.onerror = (error) => {
-    // A catastrophic worker failure rejects every in-flight request
-    pendingRequests.forEach(({ reject }) => {
-      reject(new Error(`SQLite worker error: ${error.message}`));
-    });
-    pendingRequests.clear();
-  };
-
-  return worker;
-}
-
-/**
- * Send an action to the worker and await its response.
- *
- * @param {string} action - Action name (see src/sqlite-worker.js)
+ * @param {string} action - Action name (see electron/database.js)
  * @param {object} [params={}] - Action parameters
  * @returns {Promise<any>} The action result
+ * @throws {Error} Outside the Electron app (no preload bridge) or on SQL errors
  */
-function callWorker(action, params = {}) {
-  return new Promise((resolve, reject) => {
-    const id = nextRequestId++;
-    pendingRequests.set(id, { resolve, reject });
-    getWorker().postMessage({ id, action, params });
-  });
+function callDatabase(action, params = {}) {
+  if (typeof window === 'undefined' || !window.electronDb) {
+    return Promise.reject(
+      new Error(
+        'The SQLite database runs via node:sqlite in the Electron main process. ' +
+        'Run the app with `npm run electron` — plain web browsers have no node:sqlite.'
+      )
+    );
+  }
+  return window.electronDb.call(action, params);
 }
 
 /**
- * Report whether the database is persisted (OPFS) or transient,
- * along with the SQLite version.
+ * Report whether the database is persistent (always true under
+ * Electron — a file on disk) along with its path and SQLite version.
  *
  * @returns {Promise<{persistent: boolean, filename: string, sqliteVersion: string}>}
  */
 export function getStatus() {
-  return callWorker('status');
+  return callDatabase('status');
 }
 
 /**
@@ -101,7 +60,7 @@ export function getStatus() {
  * @returns {Promise<void>}
  */
 export async function initSchema() {
-  await callWorker('exec', {
+  await callDatabase('exec', {
     sql: `CREATE TABLE IF NOT EXISTS notes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       content TEXT NOT NULL,
@@ -117,11 +76,11 @@ export async function initSchema() {
  * @returns {Promise<number>} The id of the inserted row
  */
 export async function addNote(content) {
-  await callWorker('exec', {
+  await callDatabase('exec', {
     sql: 'INSERT INTO notes (content, created_at) VALUES (?, ?)',
     params: [content, new Date().toISOString()],
   });
-  const rows = await callWorker('query', { sql: 'SELECT last_insert_rowid() AS id' });
+  const rows = await callDatabase('query', { sql: 'SELECT last_insert_rowid() AS id' });
   return rows[0].id;
 }
 
@@ -131,7 +90,7 @@ export async function addNote(content) {
  * @returns {Promise<Array<{id: number, content: string, created_at: string}>>}
  */
 export function listNotes() {
-  return callWorker('query', {
+  return callDatabase('query', {
     sql: 'SELECT id, content, created_at FROM notes ORDER BY id DESC',
   });
 }
@@ -143,7 +102,7 @@ export function listNotes() {
  * @returns {Promise<void>}
  */
 export async function deleteNote(id) {
-  await callWorker('exec', {
+  await callDatabase('exec', {
     sql: 'DELETE FROM notes WHERE id = ?',
     params: [id],
   });
@@ -156,7 +115,7 @@ export async function deleteNote(id) {
  * @returns {Promise<void>}
  */
 export async function createNotesIndex() {
-  await callWorker('exec', {
+  await callDatabase('exec', {
     sql: 'CREATE INDEX IF NOT EXISTS idx_notes_created_at ON notes(created_at)',
   });
 }
@@ -167,7 +126,7 @@ export async function createNotesIndex() {
  * @returns {Promise<Array<{name: string, tbl_name: string}>>}
  */
 export function listIndexes() {
-  return callWorker('query', {
+  return callDatabase('query', {
     sql: `SELECT name, tbl_name FROM sqlite_master
       WHERE type = 'index' AND name NOT LIKE 'sqlite_%'
       ORDER BY name`,
@@ -181,7 +140,7 @@ export function listIndexes() {
  * @returns {Promise<Uint8Array>} The database file image
  */
 export function exportDatabase() {
-  return callWorker('export');
+  return callDatabase('export');
 }
 
 /**
@@ -192,5 +151,5 @@ export function exportDatabase() {
  * @returns {Promise<void>}
  */
 export async function importDatabase(bytes) {
-  await callWorker('import', { bytes });
+  await callDatabase('import', { bytes });
 }

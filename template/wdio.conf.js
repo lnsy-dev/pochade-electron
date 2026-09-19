@@ -4,20 +4,22 @@
  * End-to-end test configuration for the Pochade-Electron template.
  *
  * For LLMs: these tests drive the REAL Electron app — the same binary
- * `npm run electron` launches — using Electron's own testing toolchain:
+ * `npm run electron` launches — via the official Electron service
+ * (@wdio/electron-service):
  *
- *   - `electron-chromedriver` is version-locked to the `electron`
- *     package, so its ChromeDriver always matches Electron's bundled
- *     Chromium (no system Chrome, no driver downloads).
- *   - The capability's `goog:chromeOptions.binary` points at the
- *     Electron binary and passes the project directory as a positional
- *     argument, so the app boots exactly like `electron .` does.
+ *   - The service detects the Electron binary in node_modules and the
+ *     app entry point (package.json "main"), launches the app with the
+ *     correct arguments, and manages a matching Chromedriver. Do NOT
+ *     hand-roll a `goog:chromeOptions` launch here: modern Chromedriver
+ *     mangles positional app paths into switches, and Electron then
+ *     boots its default app instead of this project (the tests would
+ *     silently run against the wrong app).
  *   - The app detects the webpack dev server started below and loads
  *     it, mirroring `npm run electron` development mode.
  *
  * They exercise the full stack: webpack bundling, the dev server,
- * Electron's main process and window, custom elements, web workers,
- * WebAssembly, and OPFS persistence.
+ * Electron's main process and window, custom elements, WebAssembly,
+ * and the node:sqlite database in the main process.
  *
  * Displays: on a desktop the Electron window simply opens while tests
  * run. On headless Linux CI, WebdriverIO's built-in `autoXvfb` wraps
@@ -35,21 +37,19 @@
  * API (see tests/e2e/file-storage-component.spec.js).
  *
  * A WebdriverIO session is REUSED across tests in a spec file (and
- * OPFS data persists between navigations). Specs that touch the
- * database must clean up leftover entries in beforeEach — see
+ * the database file persists between navigations — it lives in the
+ * session data directory of the launched profile). Specs that touch
+ * the database must clean up leftover entries in beforeEach — see
  * clearExistingEntries() in tests/helpers/e2e-utils.js. Each spec
  * file gets its own Electron instance with a fresh profile, so state
  * never leaks between spec files.
  */
 
-import { spawn, execFileSync } from 'node:child_process';
-import fs from 'node:fs';
+import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createRequire } from 'node:module';
 import dotenv from 'dotenv';
 
-const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Load the project-specific dev server port so WebdriverIO uses the same
@@ -60,45 +60,9 @@ const port = process.env.PORT || 3000;
 const baseURL = `http://localhost:${port}`;
 
 /**
- * Path of the Electron binary installed in node_modules — the exact
- * binary `npm run electron` launches.
- */
-const electronBinary = require('electron');
-
-/**
- * ChromeDriver shipped by `electron-chromedriver`. Its version is
- * locked to the `electron` package, so it always matches Electron's
- * bundled Chromium major version (ChromeDriver refuses mismatched
- * browsers).
- */
-const chromedriverBinary = path.join(
-  path.dirname(require.resolve('electron-chromedriver/package.json')),
-  'bin',
-  process.platform === 'win32' ? 'chromedriver.exe' : 'chromedriver'
-);
-
-if (!fs.existsSync(chromedriverBinary)) {
-  throw new Error(
-    `electron-chromedriver binary not found at ${chromedriverBinary}. ` +
-    'Run `npm install` to (re)install it next to the `electron` package.'
-  );
-}
-
-/**
- * The Chromium version Electron bundles, as reported by its
- * ChromeDriver ("ChromeDriver 150.0.7871.250 ..."). Declaring it as
- * `browserVersion` tells WebdriverIO not to probe the Electron binary
- * with `--version` — Electron reports its own version there (e.g.
- * "v43.5.1"), which WebdriverIO cannot parse as a Chrome version.
- */
-const chromeVersion = (
-  execFileSync(chromedriverBinary, ['--version'], { encoding: 'utf8' })
-    .match(/ChromeDriver\s+(\d+\.\d+\.\d+\.\d+)/) || [])[1];
-
-/**
  * The app directory itself (its package.json "main" points at
- * electron/main.js). Passed as a positional argument so Electron
- * launches the project, just like `electron .`.
+ * electron/main.js). Given to the Electron service as the app to
+ * launch — equivalent to `electron .`.
  */
 const appRoot = path.resolve(__dirname);
 
@@ -163,25 +127,29 @@ export const config = {
    * - `--no-sandbox`/`--disable-gpu`/`--disable-dev-shm-usage` keep
    *   the app happy in CI containers and under virtual displays.
    */
+  /**
+   * Launch the app through @wdio/electron-service, which knows how to
+   * pass the app path to Electron correctly and picks a matching
+   * Chromedriver automatically.
+   *
+   * `--no-sandbox`/`--disable-gpu`/`--disable-dev-shm-usage` keep the
+   * app happy in CI containers and under virtual displays.
+   */
+  services: ['electron'],
+
   capabilities: [
     {
-      browserName: 'chrome',
-      /**
-       * Chromium version of the Electron binary (see above). Prevents
-       * WebdriverIO's version auto-detection, which chokes on the
-       * Electron binary.
-       */
-      browserVersion: chromeVersion,
-      'wdio:chromedriverOptions': {
-        binary: chromedriverBinary,
-      },
-      'goog:chromeOptions': {
-        binary: electronBinary,
-        args: [
+      browserName: 'electron',
+      'wdio:electronServiceOptions': {
+        // Unpackaged app: point the service at the main-process entry
+        // point (the package.json also carries an electron-builder
+        // config, which would otherwise send the service looking for a
+        // compiled binary in release/).
+        appEntryPoint: path.join(appRoot, 'electron', 'main.js'),
+        appArgs: [
           '--no-sandbox',
           '--disable-gpu',
           '--disable-dev-shm-usage',
-          appRoot,
         ],
       },
     },

@@ -2,11 +2,13 @@
  * Database Component Tests
  *
  * End-to-end tests for <db-component>: SQLite reads/writes, index
- * generation, and OPFS persistence in a real browser.
+ * generation, and file persistence in the real Electron app (the
+ * database is node:sqlite in the main process, backed by a file in
+ * the session data directory).
  *
- * WebdriverIO note: one browser session is shared across this file and
- * OPFS data survives navigation — clearExistingEntries() gives each
- * test a clean table.
+ * WebdriverIO note: one browser session is shared across this file
+ * and the database survives navigation — clearExistingEntries() gives
+ * each test a clean table.
  */
 
 import { expect, browser } from '@wdio/globals';
@@ -26,13 +28,13 @@ describe('Database Component', () => {
     await clearExistingEntries();
   });
 
-  it('reports persistent OPFS storage', async () => {
+  it('reports persistent file-backed storage', async () => {
     const status = $('db-component .db-status');
-    // Headless Chrome supports OPFS in workers, so the persistent path
-    // must be taken. If this ever fails, check that the browser still
-    // supports FileSystemSyncAccessHandle.
+    // The database runs in the Electron main process via node:sqlite
+    // and is always backed by a real file. If this ever fails, check
+    // that electron/main.js started the database service.
     await expect(status).toHaveText(
-      expect.stringContaining('Persistent storage (OPFS)')
+      expect.stringContaining('Persistent storage (file)')
     );
   });
 
@@ -75,7 +77,7 @@ describe('Database Component', () => {
     );
   });
 
-  it('persists entries across page reloads (OPFS)', async () => {
+  it('persists entries across page reloads', async () => {
     await addNote('note that survives reload');
 
     await browser.refresh();

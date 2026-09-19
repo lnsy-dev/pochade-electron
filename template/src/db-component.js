@@ -1,12 +1,12 @@
 /**
  * Database Component
  *
- * Interactive demo of the sqlite-wasm database layer. Shows how to:
+ * Interactive demo of the node:sqlite database layer. Shows how to:
  *   - Initialize the schema on startup
  *   - Write entries (INSERT) and read them back (SELECT)
  *   - Delete entries
  *   - Generate an index (CREATE INDEX) and list existing indexes
- *   - Report whether storage is persistent (OPFS) or transient
+ *   - Report where the database file lives
  *
  * All SQL lives in src/lib/database.js — this component only renders
  * state and forwards user intent.
@@ -33,7 +33,7 @@ import {
  * DbComponent
  *
  * A custom HTML element providing a small note-taking UI backed by
- * SQLite running in a web worker.
+ * node:sqlite (DatabaseSync) running in the Electron main process.
  *
  * @extends DataroomElement
  */
@@ -51,7 +51,7 @@ class DbComponent extends DataroomElement {
     this.create('h2', { content: 'SQLite Database' });
 
     this.create('p', {
-      content: 'Entries are stored in a SQLite database running in a web worker via sqlite-wasm.',
+      content: 'Entries are stored in a SQLite database (node:sqlite) in the Electron main process.',
     });
 
     // Storage status line: OPFS (persistent) vs transient fallback
@@ -90,8 +90,8 @@ class DbComponent extends DataroomElement {
       await initSchema();
 
       this.statusLine.textContent = status.persistent
-        ? `Persistent storage (OPFS): ${status.filename} — SQLite ${status.sqliteVersion}`
-        : `Transient in-memory database (OPFS unavailable) — SQLite ${status.sqliteVersion}`;
+        ? `Persistent storage (file): ${status.filename} — SQLite ${status.sqliteVersion}`
+        : `Transient database — SQLite ${status.sqliteVersion}`;
 
       await this.refresh();
     } catch (error) {
