@@ -25,10 +25,18 @@
 /* Theme variables: colors, fonts, spacing tokens */
 @import './styles/variables.css';
 
+/*
+  Vendor stylesheet for the command-panel package (npm: command-panel).
+  It styles the palette dialog using the theme variables above — the
+  app-side hamburger button styles live in styles/command-panel.css.
+*/
+@import 'command-panel/dist/main.css';
+
 /* Component-specific styles */
 @import './styles/db-component.css';
 @import './styles/file-storage-component.css';
 @import './styles/memory-profiler-component.css';
+@import './styles/command-panel.css';
 /* <WASM> */
 @import './styles/wasm-components.css';
 /* </WASM> */

@@ -31,6 +31,14 @@ import './src/file-storage-component.js';
 import './src/memory-profiler-component.js';
 
 // ============================================================================
+// Command Panel
+// ============================================================================
+
+// Command palette (npm: command-panel): registers the default commands,
+// wires the hamburger button, and adds the Cmd+P / Ctrl+P shortcut
+import './src/commands.js';
+
+// ============================================================================
 // WebAssembly Examples
 // ============================================================================
 

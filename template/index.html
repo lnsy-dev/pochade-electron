@@ -27,6 +27,25 @@
   -->
   <div class="title-bar"></div>
 
+  <!-- ========================================================================= -->
+  <!-- Command Panel                                                             -->
+  <!-- ========================================================================= -->
+
+  <!--
+    Command Panel Button
+    Hamburger button in the upper right that opens the command panel.
+    Wired up in src/commands.js alongside the Cmd/Ctrl+P shortcut.
+  -->
+  <button id="command_panel_button" class="command-panel-button" aria-label="Open command panel" title="Command panel (Cmd+P or Ctrl+Shift+P)">&#9776;</button>
+
+  <!--
+    Command Panel Component
+    A searchable palette of quick actions (npm: command-panel). The built-in
+    open-keys attribute handles Ctrl+Shift+P (Cmd+Shift+P on macOS);
+    src/commands.js adds Cmd+P / Ctrl+P and registers the default commands.
+  -->
+  <command-panel id="command_panel" open-keys="ctrl+shift+p"></command-panel>
+
   <!--
     Memory Profiler Component
     Fixed upper-left overlay showing memory and CPU usage. Hidden by default;

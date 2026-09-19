@@ -102,6 +102,14 @@ npm run test:unit
 
 The e2e suite starts and stops the webpack dev server automatically (`onPrepare`/`onComplete` hooks in `wdio.conf.js`), and the Electron main process loads that dev server exactly like `npm run electron` does.
 
+## Command Panel
+
+The app ships with a command palette (npm: `command-panel`):
+
+- Open it with the hamburger button in the upper right, `Cmd+P`/`Ctrl+P`, or `Ctrl+Shift+P` (`Cmd+Shift+P` also works on macOS).
+- Default commands live in `src/commands.js` (`createDefaultCommands()`); add or remove commands there — see `AGENTS.md` → "Command Panel" for the conventions and the runtime `addCommand()` API.
+- The panel emits `COMMAND-EXECUTED` `{ name, icon }` events and reads the theme variables from `styles/variables.css`.
+
 ## Local Storage Architecture
 
 - `src/sqlite-worker.js` runs SQLite (compiled to WebAssembly) in a module web worker. It persists the database in OPFS (Origin Private File System) via sqlite-wasm's "opfs-sahpool" VFS, which works in any modern browser without special HTTP headers; if OPFS is unavailable it falls back to a transient in-memory database.

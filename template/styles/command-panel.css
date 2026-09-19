@@ -1,0 +1,43 @@
+/*
+  Command Panel
+
+  App-side chrome for the command palette. The panel itself (dialog,
+  search field, command list) is styled by the command-panel package's
+  own stylesheet, imported from node_modules in index.css; it reads the
+  same :root theme variables defined in styles/variables.css.
+*/
+
+/*
+  Hamburger Button
+
+  Sits in the upper right, inside the draggable title-bar strip. It must
+  opt out of dragging (-webkit-app-region) to receive clicks in Electron
+  and stack above the .title-bar drag layer (z-index 1000).
+*/
+.command-panel-button {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: var(--title-bar-height);
+  height: var(--title-bar-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  color: var(--foreground-color);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  z-index: 1001;
+}
+
+.command-panel-button:hover {
+  background-color: var(--secondary-color);
+}
+
+.command-panel-button:active {
+  background-color: var(--highlight-color);
+}

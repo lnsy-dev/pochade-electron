@@ -1,4 +1,4 @@
-<!-- Version: 0.3.0 -->
+<!-- Version: 0.4.0 -->
 
 # Agent Conventions for Pochade-Electron Projects
 
@@ -16,7 +16,7 @@ The generated Electron app's `package.json` version starts at **0.1.0**. Wheneve
 
 ### This Document
 
-This document follows [Semantic Versioning](https://semver.org/). Current version: **0.3.0**
+This document follows [Semantic Versioning](https://semver.org/). Current version: **0.4.0**
 
 Whenever you change this file, update the version in the comment above using these rules:
 
@@ -76,6 +76,35 @@ Rules:
 - NEVER embed CSS in JavaScript
 - Create CSS in `styles/<component-name>.css` and import in `index.css`
 - `this.event(name, detail)` dispatches a non-bubbling CustomEvent on the element; to notify another component, call its methods directly (see `src/file-storage-component.js` calling `dbComponent.refresh()`)
+
+### Command Panel
+
+The app ships with a command palette (npm: `command-panel`): the `<command-panel>` element in `index.html`, wired up in `src/commands.js`. Users open it with the hamburger button in the upper right, `Cmd+P`/`Ctrl+P` (wired in `src/commands.js`), or the panel's built-in `open-keys="ctrl+shift+p"` attribute (`Cmd+Shift+P` also works on macOS).
+
+**Adding a command** — append a `{ name, icon, action }` entry to `createDefaultCommands()` in `src/commands.js`:
+
+```javascript
+{
+  name: 'Do The Thing',
+  icon: '🎯',
+  action: () => someComponent.doTheThing(), // may be async
+}
+```
+
+Or register from anywhere after setup: `document.getElementById('command_panel').addCommand('Do The Thing', '🎯', callback)`. Actions reach app state through component public methods or `src/lib/` libraries — never by querying other components' internal DOM.
+
+**Removing a command** — delete its entry from `createDefaultCommands()`. The package has no `removeCommand()`; to remove at runtime, filter the array:
+
+```javascript
+const commandPanel = document.getElementById('command_panel');
+commandPanel.commands = commandPanel.commands.filter(
+  (command) => command.name !== 'Do The Thing'
+);
+```
+
+**Changing the open shortcut** — edit the `open-keys` attribute in `index.html` (e.g. `open-keys="alt+k"`; modifiers: `ctrl`, `shift`, `alt`, `cmd`). The `Cmd+P`/`Ctrl+P` handler lives separately in `src/commands.js` (`matchesPrimaryOpenShortcut`).
+
+The panel emits `COMMAND-EXECUTED` `{ name, icon }` when the user picks an item — listen with `commandPanel.on('COMMAND-EXECUTED', callback)`. Panel styling comes from the package stylesheet imported in `index.css` and reads the `:root` theme variables from `styles/variables.css`; the hamburger button is styled in `styles/command-panel.css`.
 
 ### Database
 
