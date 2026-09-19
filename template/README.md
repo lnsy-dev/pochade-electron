@@ -102,6 +102,8 @@ npm run test:unit
 
 The e2e suite starts and stops the webpack dev server automatically (`onPrepare`/`onComplete` hooks in `wdio.conf.js`), and the Electron main process loads that dev server exactly like `npm run electron` does.
 
+Each spec file launches its own Electron instance, and the suite never leaves them behind: when the run ends — normally, after a crash, or on Ctrl+C — `wdio.conf.js` kills any instances it launched (SIGTERM, then SIGKILL after a grace period). Electron apps that were already open before the run (e.g. a dev app from `npm run electron`) are deliberately left alone.
+
 ## Command Panel
 
 The app ships with a command palette (npm: `command-panel`):

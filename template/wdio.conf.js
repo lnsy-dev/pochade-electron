@@ -43,9 +43,16 @@
  * clearExistingEntries() in tests/helpers/e2e-utils.js. Each spec
  * file gets its own Electron instance with a fresh profile, so state
  * never leaks between spec files.
+ *
+ * Cleanup: a run that ends abnormally (crashed spec, failed session
+ * delete, Ctrl+C) would otherwise leave Electron instances running.
+ * killLeftoverElectronApps() below sweeps every instance the run
+ * launched on normal completion AND on interrupt signals. Instances
+ * that predate the run (e.g. a dev app someone left open from
+ * `npm run electron`) are snapshotted first and never killed.
  */
 
-import { spawn } from 'node:child_process';
+import { spawn, execSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
@@ -90,6 +97,97 @@ async function waitForServer(url, timeoutMs = 120000) {
     }
   }
   throw new Error(`Dev server at ${url} did not start within ${timeoutMs}ms`);
+}
+
+/**
+ * PIDs of this project's Electron processes observed before the suite
+ * started (e.g. a dev app from `npm run electron`). The cleanup sweep
+ * must never kill these — they are not ours to close.
+ */
+const preExistingElectronPids = new Set();
+
+/**
+ * List PIDs of Electron processes belonging to THIS project, matched by
+ * the electron binary inside this project's node_modules (the main
+ * binary and every helper carry that path prefix). Returns [] on
+ * Windows, which has no portable `ps` equivalent — the sweep is a no-op
+ * there.
+ *
+ * @returns {number[]} Matching PIDs, or [] if process listing fails
+ */
+function projectElectronPids() {
+  if (process.platform === 'win32') {
+    return [];
+  }
+  const binaryPath = path.join(appRoot, 'node_modules', 'electron', 'dist');
+  try {
+    const listing = execSync('ps -axo pid=,command=', { encoding: 'utf8' });
+    const pids = [];
+    for (const line of listing.split('\n')) {
+      const match = line.match(/^\s*(\d+)\s+(.*)$/);
+      if (match && match[2].includes(binaryPath)) {
+        pids.push(Number(match[1]));
+      }
+    }
+    return pids;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Kill every Electron instance this run launched that is still alive —
+ * WebdriverIO normally deletes each spec's session, but crashed specs,
+ * failed session deletes, and interrupts leave the app running.
+ *
+ * Instances recorded before the run started are spared, and the dev
+ * server (if we own it) is shut down first so the app loses its
+ * backend before it loses its window.
+ */
+function killLeftoverElectronApps() {
+  stopOwnedDevServer();
+
+  const orphans = projectElectronPids().filter(
+    (pid) => !preExistingElectronPids.has(pid)
+  );
+  if (orphans.length === 0) {
+    return;
+  }
+
+  for (const pid of orphans) {
+    try {
+      process.kill(pid, 'SIGTERM');
+    } catch {
+      // already gone
+    }
+  }
+  // Block briefly (the runner may exit right after this) so a hung app
+  // that ignored SIGTERM can still be force-killed before we return.
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1000);
+  for (const pid of orphans) {
+    try {
+      process.kill(pid, 'SIGKILL');
+    } catch {
+      // already gone
+    }
+  }
+  console.log(
+    `Closed ${orphans.length} leftover Electron process(es) from this test run`
+  );
+}
+
+/**
+ * Shut down the dev server when we spawned it. Detached, so it has its
+ * own process group and survives terminal Ctrl+C unless we kill it.
+ */
+function stopOwnedDevServer() {
+  if (ownsDevServer && devServer && devServer.pid) {
+    try {
+      process.kill(-devServer.pid);
+    } catch {
+      // already gone
+    }
+  }
 }
 
 export const config = {
@@ -194,6 +292,12 @@ export const config = {
    * does in development.
    */
   async onPrepare() {
+    // Remember Electron instances that predate this run so the cleanup
+    // sweep spares them (they were not opened by this suite).
+    for (const pid of projectElectronPids()) {
+      preExistingElectronPids.add(pid);
+    }
+
     // Reuse an already-running dev server instead of failing with
     // EADDRINUSE (set CI=1 to always require a fresh server).
     try {
@@ -213,12 +317,24 @@ export const config = {
   },
 
   onComplete() {
-    if (ownsDevServer && devServer && devServer.pid) {
-      try {
-        process.kill(-devServer.pid);
-      } catch {
-        // already gone
-      }
-    }
+    stopOwnedDevServer();
+    killLeftoverElectronApps();
   },
 };
+
+/**
+ * onComplete does not fire when the runner itself is killed, so sweep
+ * Electron instances (and the detached dev server) on interrupt too —
+ * otherwise Ctrl+C or a `kill` of the runner orphans everything.
+ * exit(130)/exit(143) are the conventional signal exit codes.
+ */
+for (const [signal, exitCode] of [
+  ['SIGINT', 130],
+  ['SIGTERM', 143],
+]) {
+  process.on(signal, () => {
+    stopOwnedDevServer();
+    killLeftoverElectronApps();
+    process.exit(exitCode);
+  });
+}

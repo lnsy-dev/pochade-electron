@@ -1,4 +1,4 @@
-<!-- Version: 0.4.0 -->
+<!-- Version: 0.5.0 -->
 
 # Agent Conventions for Pochade-Electron Projects
 
@@ -16,7 +16,7 @@ The generated Electron app's `package.json` version starts at **0.1.0**. Wheneve
 
 ### This Document
 
-This document follows [Semantic Versioning](https://semver.org/). Current version: **0.4.0**
+This document follows [Semantic Versioning](https://semver.org/). Current version: **0.5.0**
 
 Whenever you change this file, update the version in the comment above using these rules:
 
@@ -178,6 +178,14 @@ const worker = new Worker(new URL('./my-worker.js', import.meta.url), { type: 'm
 - One Electron session is SHARED across tests in a spec file and OPFS data persists across navigations — specs that touch `<db-component>` must call `clearExistingEntries()` in `beforeEach`
 - The File System Access pickers (`showSaveFilePicker`/`showOpenFilePicker`) are native dialogs that automation cannot click — stub them with `browser.addInitScript()` and assert how the app drives the API, as in `tests/e2e/file-storage-component.spec.js`. Init scripts accumulate over the session, so later mocks must overwrite earlier ones and conflicting tests must run last
 - The wasm e2e specs (`wasm-cpp-component.spec.js`, `wasm-rust-component.spec.js`) exist only when the corresponding WASM option was selected at scaffolding time
+
+##### Closing Electron Apps
+
+Every Electron instance opened for testing MUST be closed when it is no longer needed — never finish a task with Electron processes from this project still running:
+
+- WebdriverIO terminates each spec's Electron session automatically, and `wdio.conf.js` additionally sweeps instances the run launched (`killLeftoverElectronApps`) on completion AND on Ctrl+C/`SIGTERM` — do not remove or bypass these hooks. The sweep spares instances that were already running before the suite started, so a dev app you opened with `npm run electron` is never killed by a test run
+- If a run crashes mid-suite or was interrupted before the sweep existed, check for orphans and kill them before starting new work: `ps ax -o pid,command | grep "node_modules/electron/dist"` (macOS/Linux), then `kill <pid>` for any match from this project
+- When verifying a fix manually with `npm run electron`, quit the app (Cmd+Q, or Ctrl+C for `npm run electron`) before running the e2e suite or moving on
 
 #### Unit Tests (Vitest)
 
