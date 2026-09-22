@@ -23,8 +23,8 @@ export async function waitForDbReady() {
 
 /**
  * Delete every entry currently listed in <db-component> through its
- * own UI. Gives each test a clean table even though the OPFS database
- * persists across navigations in a shared session.
+ * own UI. Gives each test a clean table even though the SQLite
+ * database persists across navigations in a shared session.
  */
 export async function clearExistingEntries() {
   let guard = 100;

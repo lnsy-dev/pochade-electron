@@ -1,6 +1,6 @@
 # Pochade-Electron Project
 
-A vanilla JS, CSS and HTML project that runs both as an **Electron desktop app** and as a **static front-end-only web app**, with SQLite local persistence (sqlite-wasm), Chrome file APIs, Custom HTML Elements, and optional C++/Rust WebAssembly.
+A vanilla JS, CSS and HTML project that runs both as an **Electron desktop app** and as a **static front-end-only web app**, with SQLite local persistence (Node's built-in `node:sqlite` in the Electron main process), Chrome file APIs, Custom HTML Elements, and optional C++/Rust WebAssembly.
 
 ## Getting Started
 
@@ -44,7 +44,7 @@ The overlay is hidden by default and only appears when the flag is provided. It 
 npm run build
 ```
 
-Creates a `dist` folder with the bundled and optimized files — a static site you can deploy to any web host. No special HTTP headers are required: the SQLite database persists in OPFS via sqlite-wasm's "opfs-sahpool" VFS, which works in any modern browser without cross-origin isolation.
+Creates a `dist` folder with the bundled and optimized files — a static site you can deploy to any web host. Note that the SQLite database runs via Node's built-in `node:sqlite` in the Electron main process, so in a plain browser the database helpers reject with a descriptive error pointing at `npm run electron` — full functionality needs the desktop app.
 
 ## Packaging the Desktop App
 
@@ -86,7 +86,7 @@ When an update is found it is downloaded in the background and the user is offer
 
 ## Testing
 
-End-to-end tests (WebdriverIO) drive the real Electron app — the same binary `npm run electron` launches — through `electron-chromedriver`, which is version-locked to Electron's bundled Chromium (no system Chrome involved). They cover database reads/writes, OPFS persistence across reloads, the WASM demos, and the File System Access dialog flows (the native pickers are stubbed via `browser.addInitScript`, since automation cannot click OS dialogs):
+End-to-end tests (WebdriverIO) drive the real Electron app — the same binary `npm run electron` launches — through `electron-chromedriver`, which is version-locked to Electron's bundled Chromium (no system Chrome involved). They cover database reads/writes, persistence across reloads, the WASM demos, and the File System Access dialog flows (the native pickers are stubbed via `browser.addInitScript`, since automation cannot click OS dialogs):
 
 ```bash
 npm test
@@ -94,7 +94,7 @@ npm test
 
 On a desktop the app window simply opens while tests run. On headless Linux CI, install xvfb (`apt install xvfb` / `dnf install xorg-x11-server-Xvfb`) — WebdriverIO's built-in `autoXvfb` wraps the tests with `xvfb-run` automatically when no display is present.
 
-Unit tests (Vitest) cover the libraries in `src/lib/` and the sqlite worker's message protocol against a real in-memory SQLite:
+Unit tests (Vitest) cover the libraries in `src/lib/` and the Electron main-process database service against a real SQLite file on disk:
 
 ```bash
 npm run test:unit
@@ -114,8 +114,9 @@ The app ships with a command palette (npm: `command-panel`):
 
 ## Local Storage Architecture
 
-- `src/sqlite-worker.js` runs SQLite (compiled to WebAssembly) in a module web worker. It persists the database in OPFS (Origin Private File System) via sqlite-wasm's "opfs-sahpool" VFS, which works in any modern browser without special HTTP headers; if OPFS is unavailable it falls back to a transient in-memory database.
-- `src/lib/database.js` is the main-thread API: `initSchema()`, `addNote()`, `listNotes()`, `deleteNote()`, `createNotesIndex()`, `listIndexes()`, `exportDatabase()`, `importDatabase()`, `getStatus()`. All SQL goes through here — always use bound parameters (`?`) for user input.
+- `electron/database.js` runs the database through Node's built-in `node:sqlite` module (`DatabaseSync`) in the Electron main process. It persists to a real SQLite file on disk (`sessionData/app.sqlite3`) — no WebAssembly, no browser storage quotas.
+- `src/lib/database.js` is the main-thread API: `initSchema()`, `addNote()`, `listNotes()`, `deleteNote()`, `createNotesIndex()`, `listIndexes()`, `exportDatabase()`, `importDatabase()`, `getStatus()`. All SQL goes through here, forwarded over the `window.electronDb` preload bridge — always use bound parameters (`?`) for user input.
+- In a plain web browser (no Electron preload bridge) the helpers reject with a descriptive error; the static web build still renders, but persistence needs the desktop app.
 - `src/lib/file-storage.js` wraps the File System Access API: `saveBytesToDisk()` and `pickFileFromDisk()` implement database export/import to real files on disk.
 - `src/db-component.js` and `src/file-storage-component.js` are the demo UIs built on these libraries.
 
@@ -134,9 +135,8 @@ SEPARATE_CSS=true                             # default: false
 
 - `src/` - JavaScript source files and custom elements
 - `src/lib/` - Framework-free libraries (database client, file storage)
-- `src/sqlite-worker.js` - The sqlite-wasm web worker
 - `src/wasm/` - WebAssembly source files (C++ and Rust), if selected at scaffolding time
-- `electron/` - Electron main process
+- `electron/` - Electron main process (including the `node:sqlite` database service)
 - `styles/` - CSS files
 - `tests/` - Test files (`tests/e2e/` WebdriverIO, `tests/unit/` Vitest)
 - `scripts/` - Build scripts (including classic Web Worker transformation)
@@ -168,7 +168,7 @@ See `src/wasm-cpp-component.js` and `src/wasm-rust-component.js` for how to load
 
 - **Electron** - Desktop app runtime and packaging (electron-builder)
 - **update-electron-app** - Auto-updates via update.electronjs.org on every release
-- **sqlite-wasm** - SQLite compiled to WebAssembly, with OPFS persistence
+- **node:sqlite** - Node's built-in SQLite module (`DatabaseSync`), running in the Electron main process
 - **File System Access API** - Chrome's API for reading/writing local files
 - **Webpack** - Bundler for development and production
 - **dataroom-js** - Custom HTML elements framework

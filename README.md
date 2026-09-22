@@ -9,8 +9,8 @@ Docs and demo: https://lnsy-dev.github.io/pochade-electron/
 
 ## Requirements
 
-- **Node.js 18+** and npm
-- **Chrome or Edge** (or the generated app's own Electron shell) for OPFS persistence and the File System Access API
+- **Node.js 18+** and npm to run the scaffolder (`npx pochade-electron`) — the generated app itself requires **Node.js 24+** (its SQLite layer uses Node's built-in `node:sqlite`)
+- No browser prerequisites for storage: the database is a real SQLite file managed by the Electron main process
 - Optional, only if you pick WASM support and want to *rebuild* it: [Emscripten](https://emscripten.org/) (C++) and/or [wasm-pack](https://rustwasm.github.io/wasm-pack/) (Rust). Prebuilt binaries are included, so the template works without any toolchain.
 
 ## What is Pochade-Electron?
@@ -18,9 +18,9 @@ Docs and demo: https://lnsy-dev.github.io/pochade-electron/
 Pochade-Electron provides a streamlined development environment with:
 
 - **Dual targets** - One codebase: `npm run build` produces a static web app (`dist/`), `npm run electron` runs it as a desktop app, `npm run electron:build` packages it with electron-builder
-- **SQLite in the browser** - [`@sqlite.org/sqlite-wasm`](https://www.npmjs.com/package/@sqlite.org/sqlite-wasm) running in a web worker, with read/write of entries and index generation out of the box
+- **SQLite in the main process** - Node's built-in [`node:sqlite`](https://nodejs.org/api/sqlite.html) (`DatabaseSync`) runs in the Electron main process, persisting to a real SQLite file on disk, with read/write of entries and index generation out of the box
 - **Auto-updates** - Tag a release (`git tag vX.Y.Z && git push origin vX.Y.Z`) and GitHub Actions builds installers for macOS, Windows, and Linux, publishes them to GitHub Releases, and installed clients self-update via [update.electronjs.org](https://www.electronjs.org/docs/latest/tutorial/updates)
-- **Chrome file APIs for local storage** - OPFS (Origin Private File System) persistence for the database, plus the File System Access API (`showSaveFilePicker` / `showOpenFilePicker`) to export/import the database file — both work in Chrome and in Electron's renderer
+- **Chrome file APIs** - The File System Access API (`showSaveFilePicker` / `showOpenFilePicker`) to export/import the database file — works in Chrome, Edge, and Electron's renderer
 - **Custom HTML Elements** - Built-in support for [dataroom-js](https://github.com/DATAROOM-NETWORK/dataroom.js)
 - **WebAssembly** - Optional C++ (Emscripten) and/or Rust (wasm-pack) examples, with prebuilt binaries so it works before you install any toolchain
 - **Modern tooling** - Webpack 5, SWC, PostCSS/cssnano
@@ -49,7 +49,7 @@ Then:
 
 ```sh
 cd my-project
-npm start          # web dev server at http://localhost:3000
+npm start          # web dev server at the port written to .env
 ```
 
 In a second terminal:
@@ -71,9 +71,11 @@ npm run electron   # the same app as a desktop app (hot-reloads against the dev 
 | `npm run build:wasm:cpp` | Rebuild the C++ wasm example (needs Emscripten) |
 | `npm run build:wasm:rust` | Rebuild the Rust wasm example (needs wasm-pack) |
 
-## A Note on OPFS Persistence
+## A Note on Local Persistence
 
-The SQLite database persists in OPFS (Origin Private File System) via sqlite-wasm's "opfs-sahpool" VFS. Unlike the classic OPFS VFS, this needs **no cross-origin isolation headers** — the generated app persists data out of the box on any static host, in the Electron renderer, and in any modern browser (Chrome, Edge, Firefox, Safari). If OPFS is ever unavailable, the app still works with a transient in-memory database, and users can export/import it as a file via the File System Access API.
+The SQLite database runs via Node's built-in `node:sqlite` in the Electron main process and persists to a real SQLite file on disk (`sessionData/app.sqlite3`). No cross-origin isolation, no browser storage quotas.
+
+Plain browsers have no `node:sqlite`: the static web build still runs, but database calls reject with a descriptive error pointing at `npm run electron`. Either way, the database can be exported to — and imported from — a file via the File System Access API (`showSaveFilePicker` / `showOpenFilePicker`).
 
 ## Philosophy
 

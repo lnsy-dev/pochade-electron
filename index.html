@@ -510,12 +510,12 @@
         <p>One codebase: <code>npm run build</code> produces a static web app (<code>dist/</code>), <code>npm run electron</code> runs it as a desktop app, and <code>npm run electron:build</code> packages it with electron-builder.</p>
       </article>
       <article>
-        <h3>SQLite in the Browser</h3>
-        <p><strong>@sqlite.org/sqlite-wasm</strong> running in a web worker, with read/write of entries and index generation out of the box.</p>
+        <h3>SQLite in the Main Process</h3>
+        <p><strong>node:sqlite</strong> — Node's built-in SQLite module — runs in the Electron main process, persisting to a real SQLite file on disk, with read/write of entries and index generation out of the box.</p>
       </article>
       <article>
         <h3>Local File Storage</h3>
-        <p>OPFS (Origin Private File System) persistence for the database, plus the File System Access API to export/import the database file — both work in Chrome and in Electron's renderer.</p>
+        <p>The File System Access API exports/imports the database file — works in Chrome, Edge, and Electron's renderer.</p>
       </article>
       <article>
         <h3>Custom HTML Elements</h3>
@@ -552,15 +552,15 @@
     </section>
 
     <section id="persistence">
-      <h2><span class="glyph">◉</span> A Note on OPFS Persistence</h2>
+      <h2><span class="glyph">◉</span> A Note on Local Persistence</h2>
       <p>
-        The SQLite database persists in OPFS (Origin Private File System) via sqlite-wasm's "opfs-sahpool" VFS. Unlike the classic OPFS VFS, this needs
-        <strong>no cross-origin isolation headers</strong> — the generated app persists data out of the box on any static host, in the Electron renderer,
-        and in any modern browser (Chrome, Edge, Firefox, Safari).
+        The SQLite database runs via Node's built-in <code>node:sqlite</code> in the Electron main process and persists to a real SQLite file on disk
+        (<code>sessionData/app.sqlite3</code>). No cross-origin isolation headers, no browser storage quotas.
       </p>
       <p>
-        If OPFS is ever unavailable, the app still works with a transient in-memory database, and users can export/import it as a file via the
-        File System Access API (<code>showSaveFilePicker</code> / <code>showOpenFilePicker</code>).
+        In a plain web browser the static build still runs, but database calls reject with a descriptive error pointing at <code>npm run electron</code>.
+        Either way, the database can be exported to — and imported from — a file via the File System Access API
+        (<code>showSaveFilePicker</code> / <code>showOpenFilePicker</code>).
       </p>
     </section>
 
@@ -583,13 +583,13 @@
       <div class="tree">
 <span class="dir">my-project/</span>
 ├── <span class="dir">electron/</span>            <span class="comment"># Electron main process</span>
-│   └── <span class="file">main.js</span>
+│   ├── <span class="file">main.js</span>
+│   └── <span class="file">database.js</span>      <span class="comment"># node:sqlite database service</span>
 ├── <span class="dir">src/</span>                 <span class="comment"># JavaScript source files</span>
 │   ├── <span class="dir">lib/</span>             <span class="comment"># Framework-free libraries (database, file storage)</span>
 │   ├── <span class="dir">wasm/</span>            <span class="comment"># Optional C++/Rust WebAssembly</span>
 │   ├── <span class="file">db-component.js</span>  <span class="comment"># SQLite example component</span>
-│   ├── <span class="file">file-storage-component.js</span>
-│   └── <span class="file">sqlite-worker.js</span> <span class="comment"># sqlite-wasm module worker</span>
+│   └── <span class="file">file-storage-component.js</span>
 ├── <span class="dir">styles/</span>              <span class="comment"># CSS files (one per component)</span>
 ├── <span class="dir">tests/</span>               <span class="comment"># WebdriverIO e2e + Vitest unit tests</span>
 ├── <span class="dir">scripts/</span>             <span class="comment"># Build scripts</span>

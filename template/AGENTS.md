@@ -1,4 +1,4 @@
-<!-- Version: 0.5.0 -->
+<!-- Version: 0.6.0 -->
 
 # Agent Conventions for Pochade-Electron Projects
 
@@ -16,7 +16,7 @@ The generated Electron app's `package.json` version starts at **0.1.0**. Wheneve
 
 ### This Document
 
-This document follows [Semantic Versioning](https://semver.org/). Current version: **0.5.0**
+This document follows [Semantic Versioning](https://semver.org/). Current version: **0.6.0**
 
 Whenever you change this file, update the version in the comment above using these rules:
 
@@ -31,7 +31,7 @@ Whenever you change this file, update the version in the comment above using the
 - **Build Tool**: Webpack 5 with SWC transpilation
 - **Custom Elements**: dataroom-js (extends HTMLElement)
 - **Desktop**: Electron (main process in `electron/`, packaged with electron-builder)
-- **Database**: `@sqlite.org/sqlite-wasm` in a module web worker, persisted in OPFS
+- **Database**: Node's built-in `node:sqlite` (`DatabaseSync`) in the Electron main process
 - **Local Files**: Chrome's File System Access API (`showSaveFilePicker` / `showOpenFilePicker`)
 - **Workers**: Web Workers (classic inline bundling, plus one native module worker for SQLite)
 - **WebAssembly**: C++ via Emscripten, Rust via wasm-pack
@@ -108,17 +108,17 @@ The panel emits `COMMAND-EXECUTED` `{ name, icon }` when the user picks an item 
 
 ### Database
 
-- ALL SQL lives in `src/lib/database.js` — components never message the worker directly
+- ALL SQL lives in `src/lib/database.js` — components never touch IPC directly
 - Always use bound parameters (`?`) for user input; never interpolate strings into SQL
-- The worker protocol lives in `src/sqlite-worker.js` (`{ id, action, params }` → `{ id, ok, result|error }`)
-- Persistence uses sqlite-wasm's "opfs-sahpool" VFS (`sqlite3.installOpfsSAHPoolVfs`) — OPFS storage with no cross-origin isolation requirement; do NOT switch to the classic `OpfsDb` (it needs COOP/COEP headers and a nested worker that bundlers break)
-- If OPFS is unavailable the worker falls back to a transient in-memory DB — always handle both (check `getStatus().persistent`)
-- Export/import uses `sqlite3_js_db_export` / `sqlite3_deserialize` in the worker, wired to the File System Access API in `src/lib/file-storage.js`
+- The database service lives in `electron/database.js` (Node's built-in `node:sqlite`, `DatabaseSync`); keep that file free of Electron imports so it stays unit-testable in plain Node
+- The renderer reaches the service only through the `window.electronDb` preload bridge exposed by `electron/preload.js` (IPC channel `pochade-db`); supported actions: `status`, `exec`, `query`, `export`, `import`
+- The database persists to a real SQLite file on disk (`sessionData/app.sqlite3`). In a plain web browser (no preload bridge) the helpers reject with a descriptive error — always handle both cases (check `getStatus().persistent`)
+- Export/import uses `db.serialize()` / `db.deserialize()` in the main process, wired to the File System Access API in `src/lib/file-storage.js`; imports must pass the `SQLite format 3\0` header check
 - File System Access pickers MUST be invoked from a user gesture (click handler)
 
 ### Electron
 
-- The `electron/` directory contains the Node/Electron main process. `electron/main.js` serves `dist/` over the privileged `app://` protocol because module workers, .wasm fetching, and OPFS all need a real secure origin (do not replace with `loadFile`)
+- The `electron/` directory contains the Node/Electron main process. `electron/main.js` serves `dist/` over the privileged `app://` protocol because module workers, .wasm fetching, and the File System Access API all need a real secure origin (do not replace with `loadFile`)
 - The renderer is plain web code: `contextIsolation: true`, `nodeIntegration: false` — do not add Node APIs to renderer code
 - `ELECTRON_DEV_URL` is read from `.env` (default `http://localhost:3000`). Electron only loads the dev server when the probe receives an OK response with the `X-Pochade-Dev-Server` identity header; otherwise it falls back to `app://./index.html`
 - Packaging config (electron-builder) lives in the `build` field of `package.json`
@@ -141,7 +141,7 @@ const worker = new Worker(new URL('./my-worker.js', import.meta.url));
 
 Never use string paths: `new Worker('./my-worker.js')` — bundlers cannot trace them.
 
-For workers that import npm modules or `.wasm` files (like `src/sqlite-worker.js`), use webpack 5's native module-worker syntax instead:
+For workers that import npm modules or `.wasm` files, use webpack 5's native module-worker syntax instead:
 
 ```javascript
 const worker = new Worker(new URL('./my-worker.js', import.meta.url), { type: 'module' });
@@ -175,7 +175,7 @@ const worker = new Worker(new URL('./my-worker.js', import.meta.url), { type: 'm
 - Run with `npm test`; the webpack dev server starts automatically via `onPrepare` in `wdio.conf.js`. Tests run in the real Electron app: `electron-chromedriver` (version-locked to the `electron` package) launches the Electron binary with the project directory, so no system Chrome is involved
 - Use `$("selector")` for element selection and `browser.execute()` for custom events; shared helpers live in `tests/helpers/e2e-utils.js` (`findButton`, `addNote`, …)
 - Use 15-second timeouts for wasm-dependent assertions (`browser.waitUntil(..., { timeout: 15000 })`)
-- One Electron session is SHARED across tests in a spec file and OPFS data persists across navigations — specs that touch `<db-component>` must call `clearExistingEntries()` in `beforeEach`
+- One Electron session is SHARED across tests in a spec file and the SQLite database persists across navigations — specs that touch `<db-component>` must call `clearExistingEntries()` in `beforeEach`
 - The File System Access pickers (`showSaveFilePicker`/`showOpenFilePicker`) are native dialogs that automation cannot click — stub them with `browser.addInitScript()` and assert how the app drives the API, as in `tests/e2e/file-storage-component.spec.js`. Init scripts accumulate over the session, so later mocks must overwrite earlier ones and conflicting tests must run last
 - The wasm e2e specs (`wasm-cpp-component.spec.js`, `wasm-rust-component.spec.js`) exist only when the corresponding WASM option was selected at scaffolding time
 
@@ -191,8 +191,8 @@ Every Electron instance opened for testing MUST be closed when it is no longer n
 
 - Use `vitest`; place tests in `tests/unit/*.test.js`; run with `npm run test:unit`
 - Unit tests run in Node with explicit mocks — no dev server, no DOM emulation layer
-- `src/lib/database.js` is tested against a fake `Worker` global that captures messages (assert exact action names, SQL, and bound params)
-- `src/sqlite-worker.js` is tested against the real Node build of sqlite-wasm (in-memory) by providing `self.onmessage`/`self.postMessage` globals; the `.wasm` import is aliased in `vitest.config.js`
+- `src/lib/database.js` is tested against a fake `window.electronDb` bridge that captures (action, params) pairs (assert exact action names, SQL, and bound params)
+- `electron/database.js` (the `node:sqlite` service) is tested against a real SQLite file in a temporary directory — not mocks
 - Browser API wrappers (`src/lib/file-storage.js`) are tested with `vi.stubGlobal('window', ...)` fakes
 - New logic MUST ship with unit tests in the same change
 
@@ -214,7 +214,7 @@ Every Electron instance opened for testing MUST be closed when it is no longer n
 |-----------|---------|
 | `src/` | JavaScript modules and components |
 | `src/lib/` | Framework-free libraries (database client, file storage) |
-| `src/sqlite-worker.js` | The sqlite-wasm module worker |
+| `electron/database.js` | The `node:sqlite` database service (main process) |
 | `src/wasm/` | WebAssembly source files and binaries |
 | `electron/` | Electron main process |
 | `styles/` | CSS files (one per component or concern) |

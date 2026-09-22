@@ -86,7 +86,7 @@ const MIME_TYPES = {
  * Register `app://` as a privileged scheme.
  * Must run before the app is ready. `standard` + `secure` make the
  * scheme behave like https: for URL parsing and web platform features
- * (workers, OPFS, File System Access API).
+ * (workers, .wasm fetching, File System Access API).
  */
 protocol.registerSchemesAsPrivileged([
   {

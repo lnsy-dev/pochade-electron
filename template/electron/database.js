@@ -7,8 +7,7 @@
  * touches Electron or IPC APIs, so it can be unit-tested in plain Node.
  *
  * The renderer talks to this service over IPC (see electron/main.js
- * and electron/preload.js) using the same action protocol the old
- * sqlite-wasm worker used:
+ * and electron/preload.js) using this action protocol:
  *
  *   status  -> { persistent, filename, sqliteVersion }
  *   exec    -> runs SQL without returning rows (DDL/INSERT/UPDATE/DELETE)

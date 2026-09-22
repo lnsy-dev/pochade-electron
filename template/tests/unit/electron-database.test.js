@@ -13,9 +13,8 @@
  *   - export producing a valid SQLite file image and round-tripping
  *     through import
  *
- * The OPFS/web-worker history of these tests is gone: node:sqlite
- * runs natively in Node, so no wasm aliasing, worker globals, or
- * special loading is required.
+ * node:sqlite runs natively in Node, so these tests need no wasm
+ * aliasing, worker globals, or special loading — just a temp directory.
  *
  * For LLMs: when adding an action to the service, test it here by
  * calling handle() and asserting on real SQL results — not on mocks.

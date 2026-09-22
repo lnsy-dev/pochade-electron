@@ -12,8 +12,8 @@
  *   - bound parameters (never string interpolation)
  *   - error propagation (bridge errors, and the no-bridge case in
  *     plain web browsers)
- *   - that no Worker is constructed anymore (node:sqlite replaced
- *     the old sqlite-wasm worker)
+ *   - that no Worker is constructed (all SQL runs in the main
+ *     process via the preload bridge)
  *
  * For LLMs: when adding a helper to src/lib/database.js, add the
  * matching test here asserting the exact action + SQL + params.
@@ -73,7 +73,7 @@ describe('database client', () => {
     await db.getStatus();
 
     expect(fakeBridge.calls).toHaveLength(1);
-    // The old sqlite-wasm worker must not come back
+    // No Worker-based database client may come back
     expect(globalThis.Worker).toBeUndefined();
   });
 

@@ -2,6 +2,9 @@
 /index.html
 /package-lock.json
 
+# Tool state (client metadata)
+/.freebuff
+
 # Dependency directories
 node_modules/
 

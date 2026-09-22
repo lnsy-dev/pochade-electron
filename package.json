@@ -1,7 +1,7 @@
 {
   "name": "pochade-electron",
   "version": "0.4.0",
-  "description": "npx starter template for dual Electron + web apps with sqlite-wasm local storage and optional C++/Rust WebAssembly",
+  "description": "npx starter template for dual Electron + web apps with SQLite local storage via node:sqlite and optional C++/Rust WebAssembly",
   "bin": {
     "create-pochade-electron": "bin/create-pochade-electron.js",
     "pochade-electron": "bin/create-pochade-electron.js"
@@ -16,8 +16,8 @@
     "template",
     "starter",
     "sqlite",
-    "sqlite-wasm",
-    "opfs",
+    "node-sqlite",
+    "node:sqlite",
     "file-system-access-api",
     "webassembly",
     "custom-elements",

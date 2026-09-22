@@ -3,6 +3,9 @@ node_modules
 .DS_Store
 *.tgz
 
+# Tool state (client metadata)
+.freebuff/
+
 # Template build artifacts (generated during testing)
 template/node_modules/
 template/dist/

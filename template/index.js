@@ -21,7 +21,7 @@ import './index.css';
 // Database & Local File Storage
 // ============================================================================
 
-// Database: sqlite-wasm in a web worker, OPFS persistence, CRUD + index demo
+// Database: node:sqlite in the Electron main process, CRUD + index demo
 import './src/db-component.js';
 
 // File storage: Chrome's File System Access API for export/import of the DB file

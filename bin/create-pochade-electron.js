@@ -5,8 +5,9 @@
  *
  * Creates a new Pochade-Electron project from the template.
  * The generated project builds both an Electron desktop app and a
- * static front-end-only web app, with sqlite-wasm local persistence
- * (OPFS + Chrome's File System Access API) and optional C++/Rust
+ * static front-end-only web app, with SQLite local persistence via
+ * Node's built-in node:sqlite (Electron main process), Chrome's File
+ * System Access API for export/import, and optional C++/Rust
  * WebAssembly support.
  *
  * Usage: npx pochade-electron my-app
@@ -572,7 +573,7 @@ async function createProject() {
   console.log('\n  npm run electron:build');
   console.log('    Builds and packages the Electron app into release/.');
   console.log('\n  npm test');
-  console.log('    Runs the WebdriverIO end-to-end tests in headless Chrome (requires a local Chrome install).');
+  console.log('    Runs the WebdriverIO end-to-end tests in the real Electron app (headless CI needs xvfb).');
   console.log('\n  npm run test:unit');
   console.log('    Runs the Vitest unit tests.');
 

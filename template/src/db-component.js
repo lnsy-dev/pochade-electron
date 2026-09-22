@@ -54,7 +54,7 @@ class DbComponent extends DataroomElement {
       content: 'Entries are stored in a SQLite database (node:sqlite) in the Electron main process.',
     });
 
-    // Storage status line: OPFS (persistent) vs transient fallback
+    // Storage status line: database file (persistent) vs transient fallback
     this.statusLine = this.create('p', {
       class: 'db-status',
       content: 'Initializing database…',
